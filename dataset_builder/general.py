@@ -15,30 +15,45 @@ def _read_file_segments(
     uri: str,
     /,
     *,
+    fn_text_preproc: t.Callable[[str], str] | None = None,
     min_seg_len: int = 1,
     redundancy_check_inds: tuple[int, int] | None = None,
     reg_banned_patterns: re.Pattern | None = None,
     fn_seg_preproc: t.Callable[[str], str] | None = None,
+    fn_seg_postproc: t.Callable[[list[str]], list[str]] | None = None,
+    apply_preproc_before_banned_patterns: bool = False,
     full_search_banned_patterns: bool = False,
 ) -> list[str]:
     with open(uri, "r", encoding="utf-8") as f_in:
-        segs = f_in.readlines()
+        if not fn_text_preproc:
+            segs = f_in.readlines()
+        else:
+            segs = fn_text_preproc(f_in.read()).split("\n")
 
     segs = [item.strip() for item in segs]
+    segs = [item for item in segs if len(item) >= min_seg_len]
+
+    if apply_preproc_before_banned_patterns and fn_seg_preproc:
+        segs = [fn_seg_preproc(item) for item in segs]
+        segs = [item for item in segs if len(item)]
+
+    if reg_banned_patterns:
+        fn_filter = (
+            reg_banned_patterns.search if full_search_banned_patterns else reg_banned_patterns.match
+        )
+        segs = [item for item in segs if not fn_filter(item)]
+
+    if not apply_preproc_before_banned_patterns and fn_seg_preproc:
+        segs = [fn_seg_preproc(item) for item in segs]
+        segs = [item for item in segs if len(item)]
 
     if redundancy_check_inds:
         i, j = redundancy_check_inds
         if len(segs) > max(i, j) and segs[i].lower() == segs[j].lower():
             segs.pop(i)
 
-    segs = [item for item in segs if len(item) >= min_seg_len]
-
-    if reg_banned_patterns:
-        fn_filter = reg_banned_patterns.search if full_search_banned_patterns else reg_banned_patterns.match
-        segs = [item for item in segs if not fn_filter(item)]
-
-    if fn_seg_preproc:
-        segs = [fn_seg_preproc(item) for item in segs]
+    if fn_seg_postproc:
+        segs = fn_seg_postproc(segs)
 
     return segs
 
@@ -53,34 +68,55 @@ def _make_pairs_generic(
     short_segment_inds: list[tuple[int, int, int]],
     fetch_law_in_segments: bool,
     fetch_questions_in_segments: bool,
+    fetch_law_in_segments_kwargs: dict[str, any] | None = None,
+    fetch_questions_in_segments_kwargs: dict[str, any] | None = None,
+    fn_text_preproc: t.Callable[[str], str] | None = None,
+    reg_filter_uris: re.Pattern | None = None,
     min_seg_len: int = 1,
     redundancy_check_inds: tuple[int, int] | None = None,
-    match_reg_banned_patterns: re.Pattern | None = None,
-    search_reg_banned_patterns: re.Pattern | None = None,
+    reg_banned_patterns: re.Pattern | None = None,
+    full_search_banned_patterns: bool = False,
     reg_document_full_skip: re.Pattern | None = None,
+    document_full_skip_inds: int | list[int] | None = None,
     fn_seg_preproc: t.Callable[[str], str] | None = None,
-    document_full_skip_inds: list[int] | None = None,
-    it_to_print: int | None = None,
+    fn_seg_postproc: t.Callable[[list[str]], list[str]] | None = None,
+    apply_preproc_before_banned_patterns: bool = False,
+    it_to_print: float | int | None = None,
 ) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
     source_dir = os.path.join(utils.TESEMO_PATH, uri, "*.txt")
+
+    uris = glob.glob(source_dir, recursive=False)
+
+    if reg_filter_uris:
+        uris = [uri for uri in uris if not reg_filter_uris.search(os.path.basename(uri))]
+
+    if it_to_print is not None and 0.0 < it_to_print < 1.0:
+        it_to_print = int(round(it_to_print * len(uris)))
+
     n = it_to_print or float("+inf")
 
-    for uri in tqdm.tqdm(glob.glob(source_dir), desc=source_name):
+    for uri in tqdm.tqdm(uris, desc=source_name):
         n -= 1
 
         segs = _read_file_segments(
             uri,
+            fn_text_preproc=fn_text_preproc,
             min_seg_len=min_seg_len,
-            match_reg_banned_patterns=match_reg_banned_patterns,
-            search_reg_banned_patterns=search_reg_banned_patterns,
+            reg_banned_patterns=reg_banned_patterns,
+            full_search_banned_patterns=full_search_banned_patterns,
             redundancy_check_inds=redundancy_check_inds,
             fn_seg_preproc=fn_seg_preproc,
+            apply_preproc_before_banned_patterns=apply_preproc_before_banned_patterns,
+            fn_seg_postproc=fn_seg_postproc,
         )
 
         skip_document = False
 
         if reg_document_full_skip:
+            if isinstance(document_full_skip_inds, int):
+                document_full_skip_inds = [document_full_skip_inds]
+
             for i in document_full_skip_inds:
                 if len(segs) > i and reg_document_full_skip.search(segs[i]):
                     skip_document = True
@@ -93,11 +129,11 @@ def _make_pairs_generic(
             i, j, min_len = long_segment_inds
 
             max_ind = max(
-                int(i.stop) if isinstance(i, slice) else (i + 1),
-                int(j.stop) if isinstance(j, slice) else (j + 1),
+                int(i.start if isinstance(i, slice) else i),
+                int(j.start if isinstance(j, slice) else j),
             )
 
-            if len(segs) >= max_ind:
+            if len(segs) > max_ind:
                 seg_a = "\n".join(segs[i]) if isinstance(i, slice) else segs[i]
                 seg_b = "\n".join(segs[j]) if isinstance(j, slice) else segs[j]
 
@@ -112,16 +148,32 @@ def _make_pairs_generic(
                         pairs.append((seg_a, seg_b))
 
             if fetch_law_in_segments:
-                pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=5, refs_i=[0, 2]))
+                if not fetch_law_in_segments_kwargs:
+                    raise ValueError(
+                        '"fetch_law_in_segments_kwargs" must be provided '
+                        'when "fetch_law_in_segments=True".'
+                    )
+
+                pairs.extend(utils.fetch_laws_in_segments(segs, **fetch_law_in_segments_kwargs))
 
             if fetch_questions_in_segments:
-                pairs.extend(utils.fetch_questions_in_segments(segs, start_i=4, context_i=0))
+                if not fetch_questions_in_segments_kwargs:
+                    raise ValueError(
+                        '"fetch_questions_in_segments_kwargs" must be provided '
+                        'when "fetch_questions_in_segments=True".'
+                    )
 
-        if n <= 0:
+                pairs.extend(
+                    utils.fetch_questions_in_segments(segs, **fetch_questions_in_segments_kwargs)
+                )
+
+        if n <= 0 and len(pairs):
             n = it_to_print
             utils.print_example(*pairs[-1])
 
-    assert len(pairs)
+    if not len(pairs):
+        raise ValueError(f"No pair has been generated ({source_name=}, {uri=}).")
+
     return pairs
 
 
@@ -153,8 +205,12 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
                 if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
                     pairs[ministerio].append((segs[2], segs[1]))
 
-                pairs[ministerio].extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1]))
-                pairs[ministerio].extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
+                pairs[ministerio].extend(
+                    utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1])
+                )
+                pairs[ministerio].extend(
+                    utils.fetch_questions_in_segments(segs, start_i=2, context_i=0)
+                )
 
         else:
             if long_segments:
@@ -170,7 +226,9 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
                     pairs[ministerio].append((segs[1], segs[2]))
 
                 pairs[ministerio].extend(utils.fetch_laws_in_segments(segs=segs, refs_i=[1, 2]))
-                pairs[ministerio].extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=1))
+                pairs[ministerio].extend(
+                    utils.fetch_questions_in_segments(segs, start_i=2, context_i=1)
+                )
 
                 if len(segs) >= 10:
                     segs[8] = reg_foto.sub("", segs[8])
@@ -185,17 +243,17 @@ def make_pairs_tv_camara(*, long_segments: bool) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
     reg_banned_patterns = re.compile(r"Créditos?")
-    reg_full_document_skip = re.compile(
-        r"Revista da Câmara|"
-        r"Veja o que|"
-        r"Câmara Hoje|"
-        r"agenda da Câmara|"
-        r"Veja os destaques|"
-        r"desta semana|"
-        r"nesta semana|"
-        r"semana passada|"
-        r"na Câmara hoje|"
-        r"Principais notícias"
+    reg_document_full_skip = re.compile(
+        r"Revista da Câmara"
+        r"|Veja o que"
+        r"|Câmara Hoje"
+        r"|agenda da Câmara"
+        r"|Veja os destaques"
+        r"|desta semana"
+        r"|nesta semana"
+        r"|semana passada"
+        r"|na Câmara hoje"
+        r"|Principais notícias"
         "",
         re.IGNORECASE,
     )
@@ -203,13 +261,15 @@ def make_pairs_tv_camara(*, long_segments: bool) -> list[tuple[str, str]]:
     for uri in tqdm.tqdm(glob.glob(os.path.join(utils.TESEMO_PATH, "outros/o8_tv_camara/*.txt"))):
         with open(uri, "r") as f_in:
             segs = [
-                item.strip() for item in f_in.read().strip().split("\n") if item.strip() and not reg_banned_patterns.match(item)
+                item.strip()
+                for item in f_in.read().strip().split("\n")
+                if item.strip() and not reg_banned_patterns.match(item)
             ]
 
         if (
             len(segs) < 2
-            or reg_full_document_skip.search(segs[1])
-            or (len(segs) >= 3 and reg_full_document_skip.search(segs[2]))
+            or reg_document_full_skip.search(segs[1])
+            or (len(segs) >= 3 and reg_document_full_skip.search(segs[2]))
         ):
             continue
 
@@ -347,7 +407,9 @@ def make_pairs_radio_camara(*, long_segments: bool) -> list[tuple[str, str]]:
         desc="radio_camara",
     ):
         with open(uri, "r") as f_in:
-            segs = [item.strip() for item in f_in.read().strip().split("\n") if len(item.strip()) >= 100]
+            segs = [
+                item.strip() for item in f_in.read().strip().split("\n") if len(item.strip()) >= 100
+            ]
 
         if long_segments:
             if len(segs) >= 2:
@@ -518,8 +580,12 @@ def make_pairs_trf1(*, long_segments: bool) -> list[tuple[str, str]]:
     )
     for uri in tqdm.tqdm(glob.glob(source_dir)):
         with open(uri, "r") as f_in:
-            segs = [reg_noise_patterns.sub("", item.strip()) for item in reg.split(f_in.read().strip())]
-            segs = [item for item in segs if len(item) >= 48 and not reg_banned_patterns.match(item)]
+            segs = [
+                reg_noise_patterns.sub("", item.strip()) for item in reg.split(f_in.read().strip())
+            ]
+            segs = [
+                item for item in segs if len(item) >= 48 and not reg_banned_patterns.match(item)
+            ]
 
         if long_segments:
             if len(segs) >= 3:
@@ -648,7 +714,9 @@ def make_pairs_cnmp(*, long_segments: bool) -> list[tuple[str, str]]:
 def make_pairs_bc(*, long_segments: bool) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o1_noticias_governamentais/banco_central/*.txt")
+    source_dir = os.path.join(
+        utils.TESEMO_PATH, "outros/o1_noticias_governamentais/banco_central/*.txt"
+    )
     for uri in tqdm.tqdm(glob.glob(source_dir), desc="news_bc"):
         with open(uri, "r") as f_in:
             segs = [item.strip() for item in f_in.read().strip().split("\n") if item.strip()]
@@ -707,7 +775,9 @@ def make_pairs_camara_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
     )
     for uri in tqdm.tqdm(source_dir, desc="news_camara"):
         with open(uri, "r") as f_in:
-            segs = [item.strip() for item in f_in.read().strip().split("\n") if len(item.strip()) >= 25]
+            segs = [
+                item.strip() for item in f_in.read().strip().split("\n") if len(item.strip()) >= 25
+            ]
 
         if long_segments:
             if len(segs) >= 3:
@@ -734,487 +804,434 @@ def make_pairs_camara_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
 
 
 def make_pairs_senado_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_split = re.compile(
         r"^\s*(?:Saiba mais|Buscar|Mais vídeos|MAIS NOTÍCIAS SOBRE|Mais informações a seguir|Mais vistas|Últimas:)$",
         re.IGNORECASE | re.MULTILINE,
     )
     reg_banned_patterns = re.compile(
-        r"^Compartilhe este conteúdo no|"
-        r"^Home|"
-        r"^Agência Senado \(Reprodução autorizada mediante citação da Agência Senado\)|"
-        r"^Compartilhar:|"
-        r"^Compartilhe:|"
-        r"[0-9]{2}/[0-9]{2}/[0-9]{4}\s*,\s+[0-9]{2}[:h][0-9]{2}|"
-        r"^O projeto foi relatado.{,60}$"
+        r"^Compartilhe este conteúdo no"
+        r"|^Home"
+        + (
+            r"|^Agência Senado \(Reprodução autorizada mediante citação da Agência Senado\)"
+            if not long_segments
+            else r""
+        )
+        + r"|^Compartilhar:"
+        r"|^Compartilhe:"
+        r"|[0-9]{2}/[0-9]{2}/[0-9]{4}\s*,\s+[0-9]{2}[:h][0-9]{2}"
+        r"|^O projeto foi relatado.{,60}$"
         "",
         re.IGNORECASE,
     )
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o1_noticias_governamentais/senado_federal/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_senado")):
-        if "cpi" in uri:
-            continue
+    reg_filter_uris = re.compile(r"cpi", re.IGNORECASE)
 
-        with open(uri, "r") as f_in:
-            segs = reg_split.split(f_in.read())[0].split("\n")
-            segs = [item.strip() for item in segs]
-            segs = [item for item in segs if len(item) >= 30 and not reg_banned_patterns.search(item)]
+    def fn_text_preproc(x: str) -> str:
+        x = reg_split.split(x)[0]
+        return x
 
-        if len(segs) >= 2 and segs[0].lower() == segs[1].lower():
-            segs.pop(0)
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/senado_federal",
+        source_name="news_senado",
+        reg_filter_uris=reg_filter_uris,
+        fn_text_preproc=fn_text_preproc,
+        long_segments=long_segments,
+        long_segment_inds=(0, slice(1, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 3, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 2, "context_i": 0},
+        min_seg_len=30,
+        redundancy_check_inds=(0, 1),
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
+    )
 
-        if long_segments:
-            if len(segs) >= 2:
-                seg_a = segs[0]
-                seg_b = "\n".join(segs[1:])
-                if min(len(seg_a), len(seg_b)) >= 48:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 48:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 64:
-                pairs.append((segs[2], segs[1]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=None))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
-
-        if i % 5000 == 0 and pairs:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_stf(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"^.{,80}atualizado há|"
-        r"pessoas já viram isso|"
-        r"Pauta de julgamentos previstos|"
-        r"Confira, abaixo, o resumo dos julgamentos previstos"
+        r"^.{,80}atualizado há"
+        r"|pessoas já viram isso"
+        r"|Pauta de julgamentos previstos"
+        r"|Confira, abaixo, o resumo dos julgamentos previstos"
         r"",
         re.IGNORECASE,
     )
-    reg_full_document_skip = re.compile(
-        r"Agenda do presidente|"
-        r"Confira os destaques da TV Justiça|"
-        r"Destaques da Rádio Justiça|"
-        r"Confira a programação"
+    reg_document_full_skip = re.compile(
+        r"Agenda do presidente"
+        r"|Confira os destaques da TV Justiça"
+        r"|Destaques da Rádio Justiça"
+        r"|Confira a programação"
         r"",
         re.IGNORECASE,
     )
 
-    source_dir = os.path.join(
-        utils.TESEMO_PATH,
-        "outros/o1_noticias_governamentais/stf_superior_tribunal_federal/*.txt",
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/stf_superior_tribunal_federal",
+        source_name="news_stf",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 48),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 3, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 2, "context_i": 0},
+        min_seg_len=1,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=0,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
     )
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_stf")):
-        with open(uri, "r") as f_in:
-            segs = [
-                item.strip()
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and not reg_banned_patterns.search(item)
-            ]
 
-        if not segs or reg_full_document_skip.search(segs[0]):
-            continue
-
-        if long_segments:
-            if len(segs) >= 3:
-                seg_a = "\n".join(segs[:2])
-                seg_b = "\n".join(segs[2:])
-                if min(len(seg_a), len(seg_b)) >= 32:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 32:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
-                pairs.append((segs[2], segs[1]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=None))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
-
-        if i % 5000 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_stm(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"\d{2}/\d{2}/\d{4}$|"
-        r"Imprimir\s*E-mail\s*|"
-        r"Imagem ilustrativa|"
-        r"foto: .{,80}$|"
-        r"Conselho Nacional de Justiça$|"
-        r"Supremo Tribunal Federal$|"
-        r"Crédito: .{,80}$"
+        r"\d{2}/\d{2}/\d{4}$"
+        r"|Imprimir\s*E-mail\s*"
+        r"|Imagem ilustrativa"
+        r"|foto: .{,80}$"
+        r"|Conselho Nacional de Justiça$"
+        r"|Supremo Tribunal Federal$"
+        r"|Crédito: .{,80}$"
         r"",
         re.IGNORECASE,
     )
 
-    source_dir = os.path.join(
-        utils.TESEMO_PATH,
-        "outros/o1_noticias_governamentais/stm_superior_tribunal_militar/*.txt",
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/stm_superior_tribunal_militar",
+        source_name="news_stm",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 48),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 3, "refs_i": [0, 1]},
+        fetch_questions_in_segments_kwargs={"start_i": 2, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=(0, 1),
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
     )
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_stm")):
-        with open(uri, "r") as f_in:
-            segs = [
-                item.strip()
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and len(item.strip()) >= 32 and not reg_banned_patterns.match(item.strip())
-            ]
 
-        if long_segments:
-            if len(segs) >= 3:
-                seg_a = "\n".join(segs[:2])
-                seg_b = "\n".join(segs[2:])
-                if min(len(seg_a), len(seg_b)) >= 32:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 32:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
-                pairs.append((segs[2], segs[1]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1]))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
-
-        if i % 5000 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_tst(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"Esse conteúdo não está disponível sem cookies|"
-        r"null$|"
-        r"imprimir$|"
-        r"Notícias do TST$|"
-        r"Seguir$|"
-        r"\([STQD]"
+        r"Esse conteúdo não está disponível sem cookies"
+        r"|null$"
+        r"|imprimir$"
+        r"|Notícias do TST$"
+        r"|Seguir$"
+        r"|\([STQD]"
         r"",
         re.IGNORECASE,
     )
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o1_noticias_governamentais/tst_tribunal_superior_do_trabalho/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_tst")):
-        with open(uri, "r") as f_in:
-            segs = [
-                item.strip()
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and not reg_banned_patterns.match(item.strip())
-            ]
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/tst_tribunal_superior_do_trabalho",
+        source_name="news_tst",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 48),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 3, "refs_i": [0, 1]},
+        fetch_questions_in_segments_kwargs={"start_i": 2, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=(0, 1),
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
+    )
 
-        if segs[0] == segs[1]:
-            segs.pop(0)
-
-        if long_segments:
-            if len(segs) >= 3:
-                seg_a = "\n".join(segs[:2])
-                seg_b = "\n".join(segs[2:])
-                if min(len(seg_a), len(seg_b)) >= 32:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 32:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
-                pairs.append((segs[2], segs[1]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1]))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
-
-        if i % 5000 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_tst_radio(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
-    reg_full_document_skip = re.compile(r"Trabalho e Justiça", re.IGNORECASE)
+    reg_document_full_skip = re.compile(r"Trabalho e Justiça", re.IGNORECASE)
 
     reg_banned_patterns = re.compile(
-        r"^null$|"
-        r"^\d{2}.\d{2}.\d{4}\s*.{,5}$|"
-        r"Baixe o [aá]udio|"
-        r"Reproduzir o áudio|"
-        r"O programa Trabalho e Justiça vai ao ar|"
-        r"Ouça os detalhes na reportagem|"
-        r"Permitida a reprodução mediante citação da fonte|"
-        r"Esta matéria tem caráter informativo, sem cunho oficial|"
-        r"Esse conteúdo não está disponível sem cookies|"
-        r"E também acompanha|"
-        r"E mais:|"
-        r"Você também vai saber|"
-        r"Você também vai var|"
-        r"Rádio Justiça|"
-        r"^Processo:|"
-        r"^Mais detalhes$|"
-        r"^Para saber mais, aperte o play!|"
-        r"\([STQD]"
+        r"^null$"
+        r"|^\d{2}.\d{2}.\d{4}\s*.{,5}$"
+        r"|Baixe o [aá]udio"
+        r"|Reproduzir o áudio"
+        r"|O programa Trabalho e Justiça vai ao ar"
+        r"|Ouça os detalhes na reportagem"
+        r"|Permitida a reprodução mediante citação da fonte"
+        r"|Esta matéria tem caráter informativo, sem cunho oficial"
+        r"|Esse conteúdo não está disponível sem cookies"
+        r"|E também acompanha"
+        r"|E mais:"
+        r"|Você também vai saber"
+        r"|Você também vai var"
+        r"|Rádio Justiça"
+        r"|^Processo:"
+        r"|^Mais detalhes$"
+        r"|^Para saber mais, aperte o play!"
+        r"|\([STQD]"
         r"",
         re.IGNORECASE,
     )
 
     reg_noise_patterns = re.compile(r"^REPÓRTER:\s*|\s*\|\s*TST na Voz do Brasil", re.IGNORECASE)
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o7_radio_tst/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="radio_tst")):
-        with open(uri, "r") as f_in:
-            segs = [
-                item.strip()
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and not reg_banned_patterns.search(item.strip())
-            ]
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        return x
 
-        if len(segs) >= 1 and reg_full_document_skip.search(segs[0]):
-            continue
+    pairs = _make_pairs_generic(
+        "outros/o7_radio_tst",
+        source_name="radio_tst",
+        long_segments=long_segments,
+        long_segment_inds=(0, slice(1, None), 32),
+        short_segment_inds=[
+            (0, 1, 32),
+        ],
+        fetch_law_in_segments=False,
+        fetch_questions_in_segments=False,
+        fetch_law_in_segments_kwargs=None,
+        fetch_questions_in_segments_kwargs=None,
+        min_seg_len=1,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=0,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=0.20,
+    )
 
-        if long_segments:
-            if len(segs) >= 2:
-                seg_a = segs[0]
-                seg_b = "\n".join(segs[1:])
-                if min(len(seg_a), len(seg_b)) >= 32:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 32:
-                segs[0] = reg_noise_patterns.sub("", segs[0])
-                segs[1] = reg_noise_patterns.sub("", segs[1])
-                pairs.append((segs[0], segs[1]))
-
-        if i % 500 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_tst_tv(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"^null$|"
-        r"^\s*Esse conteúdo não está disponível sem cookies|"
-        r"E também acompanha|"
-        r"Você também vai saber|"
-        r"você também vai ver|"
-        r"^\s*\(.{,45}\d{2,4}\)\s*$|"
-        r"^Mais detalhes$|"
-        r"^Processo:|"
-        r"^\d{2}/\d{2}/\d{2,4}\s*.?$",
+        r"^null$"
+        r"|^\s*Esse conteúdo não está disponível sem cookies"
+        r"|E também acompanha"
+        r"|Você também vai saber"
+        r"|você também vai ver"
+        r"|^\s*\(.{,45}\d{2,4}\)\s*$"
+        r"|^Mais detalhes$"
+        r"|^Processo:"
+        r"|^\d{2}/\d{2}/\d{2,4}\s*.?$",
         re.IGNORECASE,
     )
 
     reg_noise_patterns = re.compile(r"\| Programa completo", re.IGNORECASE)
 
-    reg_skip = re.compile(
-        r"Nesta edição você confere|Confira nessa edição|Veja os destaques desta edição|Nesta edição você confere|Veja os destaques desta edição",
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        return x
+
+    reg_document_full_skip = re.compile(
+        r"Nesta edição você confere"
+        r"|Confira nessa edição"
+        r"|Veja os destaques desta edição"
+        r"|Nesta edição você confere"
+        r"|Veja os destaques desta edição"
+        r"",
         re.IGNORECASE,
     )
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o10_tst_tv/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="tv_tst")):
-        with open(uri, "r") as f_in:
-            segs = [
-                item.strip()
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and len(item.strip()) >= 20 and not reg_banned_patterns.search(item.strip())
-            ]
+    pairs = _make_pairs_generic(
+        "outros/o10_tst_tv",
+        source_name="tst_tv",
+        long_segments=long_segments,
+        long_segment_inds=(0, slice(1, None), 21),
+        short_segment_inds=[
+            (0, 1, 21),
+        ],
+        fetch_law_in_segments=False,
+        fetch_questions_in_segments=False,
+        fetch_law_in_segments_kwargs=None,
+        fetch_questions_in_segments_kwargs=None,
+        min_seg_len=20,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=0,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=0.20,
+    )
 
-        if not segs or reg_skip.search(segs[0]):
-            continue
-
-        if long_segments:
-            if len(segs) >= 2:
-                seg_a = segs[0]
-                seg_b = "\n".join(segs[1:])
-                if min(len(seg_a), len(seg_b)) >= 21:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 21:
-                segs[0] = reg_noise_patterns.sub("", segs[0])
-                segs[1] = reg_noise_patterns.sub("", segs[1])
-                pairs.append((segs[0], segs[1]))
-
-        if i % 500 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_trf6(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_noise_patterns = re.compile(r"Início\s*»\s*", re.IGNORECASE)
 
-    source_dir = os.path.join(
-        utils.TESEMO_PATH, "outros/o1_noticias_governamentais/trf6_tribunal_regional_federal_da_6_regiao/*.txt"
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/trf6_tribunal_regional_federal_da_6_regiao",
+        source_name="news_trf6",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 48),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 3, "refs_i": [0, 1]},
+        fetch_questions_in_segments_kwargs={"start_i": 2, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=(0, 1),
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
     )
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_trf6")):
-        with open(uri, "r") as f_in:
-            segs = [
-                reg_noise_patterns.sub("", item.strip())
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and len(item.strip()) >= 48
-            ]
 
-        if segs[0] == segs[1]:
-            segs.pop(0)
-
-        if long_segments:
-            if len(segs) >= 3:
-                seg_a = "\n".join(segs[:2])
-                seg_b = "\n".join(segs[2:])
-                if min(len(seg_a), len(seg_b)) >= 48:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 48:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
-                pairs.append((segs[2], segs[1]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1]))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
-
-        if i % 20 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_trf5(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_noise_patterns = re.compile(r"Início\s*»\s*", re.IGNORECASE)
     reg_banned_patterns = re.compile("Última atualização:|^Por:", re.IGNORECASE)
 
-    source_dir = os.path.join(
-        utils.TESEMO_PATH, "outros/o1_noticias_governamentais/trf5_tribunal_regional_federal_da_5_regiao/*.txt"
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        return x
+
+    def fn_seg_postproc(segs: list[str]) -> list[str]:
+        out: list[str] = []
+        for seg in segs:
+            out.extend(utils.natural_sentence_tokenize(seg))
+        return out
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/trf5_tribunal_regional_federal_da_5_regiao",
+        source_name="news_trf5",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 160),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": [0, 1]},
+        fetch_questions_in_segments_kwargs={"start_i": 3, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=fn_seg_postproc,
+        apply_preproc_before_banned_patterns=False,
+        it_to_print=0.20,
     )
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_trf5")):
-        with open(uri, "r") as f_in:
-            aux = [
-                reg_noise_patterns.sub("", item.strip())
-                for item in f_in.read().strip().split("\n")
-                if item.strip() and len(item.strip()) >= 32 and not reg_banned_patterns.search(item)
-            ]
 
-            segs = []
-            for item in aux:
-                segs.extend(utils.natural_sentence_tokenize(item))
-
-        if long_segments:
-            if len(segs) >= 3:
-                seg_a = "\n".join(segs[:2])
-                seg_b = "\n".join(segs[2:])
-                if min(len(seg_a), len(seg_b)) >= 48:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 32:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
-                pairs.append((segs[2], segs[1]))
-
-            if len(segs) >= 4 and min(len(segs[2]), len(segs[3])) >= 160:
-                pairs.append((segs[2], segs[3]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs[:15], start_i=4, refs_i=[0, 1]))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=3, context_i=0))
-
-        if i % 500 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_onu(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"Legenda:|" r"Foto:|" r"Acesse também o|" r"\[embed\]|" r"\[caption" r"",
+        r"Legenda:|Foto:|Acesse também o|\[embed\]|\[caption",
         re.IGNORECASE,
     )
 
     reg_noise_patterns = re.compile("(?:Foto|Imagem):.{1,80}$", re.MULTILINE)
 
-    reg_full_document_skip = re.compile(
-        r"Boletim semanal da ONU Brasil|" r"Visualize o boletim também em|" r"Confira o boletim da ONU Brasil" r"",
+    reg_document_full_skip = re.compile(
+        r"^Boletim semanal da ONU Brasil|^Visualize o boletim também em|^Confira o boletim da ONU Brasil",
     )
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o1_noticias_governamentais/onu_brasil/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_onu")):
-        with open(uri, "r") as f_in:
-            segs = [reg_noise_patterns.sub("", item.strip()) for item in f_in.read().strip().split("\n")]
-            segs = [item for item in segs if item.strip() and not reg_banned_patterns.match(item)]
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        return x
 
-        if reg_full_document_skip.match(segs[9]):
-            continue
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/onu_brasil",
+        source_name="news_onu",
+        long_segments=long_segments,
+        long_segment_inds=(slice(9, 13), slice(13, None), 64),
+        short_segment_inds=[
+            (9, 11, 48),
+            (12, 11, 64),
+            (12, 13, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 14, "refs_i": [9, 11]},
+        fetch_questions_in_segments_kwargs={"start_i": 13, "context_i": 9},
+        min_seg_len=0,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=9,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=0.20,
+    )
 
-        if long_segments:
-            if len(segs) >= 13:
-                seg_a = "\n".join(segs[9:13])
-                seg_b = "\n".join(segs[13:])
-                if min(len(seg_a), len(seg_b)) >= 64:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 12 and min(len(segs[9]), len(segs[11])) >= 48:
-                pairs.append((segs[9], segs[11]))
-
-            if len(segs) >= 13 and min(len(segs[12]), len(segs[11])) >= 64:
-                pairs.append((segs[12], segs[11]))
-
-            if len(segs) >= 14 and min(len(segs[12]), len(segs[13])) >= 64:
-                pairs.append((segs[12], segs[13]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=14, refs_i=[9, 11]))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=13, context_i=9))
-
-        if i % 2000 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
 
 
 def make_pairs_capes(*, long_segments: bool) -> list[tuple[str, str]]:
-    pairs: list[tuple[str, str]] = []
-
     reg_banned_patterns = re.compile(
-        r"Compartilhe|"
-        r"link para copiar para a área de transferência|"
-        r"link para Copiar para área de transferência|"
-        r"Publicado em",
+        r"Compartilhe"
+        r"|link para copiar para a área de transferência"
+        r"|link para Copiar para área de transferência"
+        r"|Publicado em",
         re.IGNORECASE,
     )
     reg_noise_patterns = re.compile(r"\{mosimage\}")
@@ -1222,44 +1239,37 @@ def make_pairs_capes(*, long_segments: bool) -> list[tuple[str, str]]:
     reg_fix_quote_end = re.compile(r"\?\s*(?=[^a-zçáéíóúàâêôãẽõü\s])", re.IGNORECASE)
     reg_fix_comma = re.compile(r",(?=[^\s])")
 
-    source_dir = os.path.join(utils.TESEMO_PATH, "outros/o1_noticias_governamentais/capes/*.txt")
-    for i, uri in enumerate(tqdm.tqdm(glob.glob(source_dir), desc="news_capes")):
-        with open(uri, "r") as f_in:
-            segs = [reg_noise_patterns.sub("", item.strip()) for item in f_in.read().strip().split("\n")]
-            segs = [
-                reg_fix_comma.sub(
-                    ", ",
-                    reg_fix_quote_end.sub('" ', reg_fix_quote_start.sub(' "', item)),
-                )
-                for item in segs
-                if len(item) >= 32 and not reg_banned_patterns.match(item)
-            ]
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise_patterns.sub("", x)
+        x = reg_fix_quote_start.sub(' "', x)
+        x = reg_fix_quote_end.sub('" ', x)
+        x = reg_fix_comma.sub(", ", x)
+        return x
 
-        if len(segs) > 1 and segs[0].lower() == segs[1].lower():
-            segs.pop(0)
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/capes",
+        source_name="news_capes",
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 21),
+            (2, 1, 32),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 3, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=(0, 1),
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=0.20,
+    )
 
-        if long_segments:
-            if len(segs) >= 4:
-                seg_a = "\n".join(segs[:3])
-                seg_b = "\n".join(segs[3:])
-                if min(len(seg_a), len(seg_b)) >= 64:
-                    pairs.append((seg_a, seg_b))
-
-        else:
-            if len(segs) >= 2 and min(len(segs[0]), len(segs[1])) >= 21:
-                pairs.append((segs[0], segs[1]))
-
-            if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 32:
-                pairs.append((segs[2], segs[1]))
-
-            if len(segs) >= 4 and min(len(segs[2]), len(segs[3])) >= 64:
-                pairs.append((segs[2], segs[3]))
-
-            pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=4, refs_i=None))
-            pairs.extend(utils.fetch_questions_in_segments(segs, start_i=3, context_i=0))
-
-        if i % 200 == 0:
-            utils.print_example(*pairs[-1])
-
-    assert len(pairs)
     return pairs
