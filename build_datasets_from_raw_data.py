@@ -18,49 +18,70 @@ def main(args) -> None:
 
     dfs = []
 
-    pairs = dataset_builder.general.make_pairs_capes(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_capes"))
+    pairs = dataset_builder.general.make_pairs_tv_camara(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="tv_camara"))
     print(dfs[-1])
     exit(0)
 
-    pairs = dataset_builder.general.make_pairs_onu(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_onu"))
+    pairs = dataset_builder.general.make_pairs_mpt(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_mpt"))
 
-    pairs = dataset_builder.general.make_pairs_trf5(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf5"))
+    pairs = dataset_builder.general.make_pairs_mpm(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_mpm"))
 
-    pairs = dataset_builder.general.make_pairs_trf6(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf6"))
+    pairs = dataset_builder.general.make_pairs_tcu(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_tcu"))
 
-    pairs = dataset_builder.general.make_pairs_tst_tv(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="tv_tst"))
+    pairs = dataset_builder.general.make_pairs_radio_camara(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="radio_camara"))
 
-    pairs = dataset_builder.general.make_pairs_tst_radio(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="radio_tst"))
+    pairs = dataset_builder.general.make_pairs_trf4(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf4"))
 
-    pairs = dataset_builder.general.make_pairs_tst(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_tst"))
-
-    pairs = dataset_builder.general.make_pairs_stm(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_stm"))
-
-    pairs = dataset_builder.general.make_pairs_stf(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_stf"))
+    pairs = dataset_builder.general.make_pairs_trf1(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf1"))
 
     pairs = dataset_builder.general.make_pairs_stj(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_stj"))
 
-    pairs = dataset_builder.general.make_pairs_senado_noticias(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_senado"))
+    pairs = dataset_builder.general.make_pairs_bc(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_bc"))
 
     pairs = dataset_builder.general.make_pairs_camara_noticias(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_camara"))
 
+    pairs = dataset_builder.general.make_pairs_senado_noticias(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_senado"))
+
+    pairs = dataset_builder.general.make_pairs_stf(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_stf"))
+
+    pairs = dataset_builder.general.make_pairs_stm(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_stm"))
+
+    pairs = dataset_builder.general.make_pairs_tst(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_tst"))
+
+    pairs = dataset_builder.general.make_pairs_tst_radio(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="radio_tst"))
+
+    pairs = dataset_builder.general.make_pairs_tst_tv(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="tv_tst"))
+
+    pairs = dataset_builder.general.make_pairs_trf6(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf6"))
+
+    pairs = dataset_builder.general.make_pairs_trf5(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf5"))
+
+    pairs = dataset_builder.general.make_pairs_onu(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_onu"))
+
+    pairs = dataset_builder.general.make_pairs_capes(long_segments=args.long_segments)
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_capes"))
+
     pairs = dataset_builder.general.make_pairs_camara_noticias_comments()
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_camara_comments"))
-
-    pairs = dataset_builder.general.make_pairs_bc(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_bc"))
 
     pairs = dataset_builder.faqs.make_pairs_bc()
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="faq_bc"))
@@ -71,35 +92,14 @@ def main(args) -> None:
     pairs = dataset_builder.general.make_pairs_tse(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_tse"))
 
-    pairs = dataset_builder.general.make_pairs_trf1(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf1"))
-
     pairs = dataset_builder.general.make_pairs_trf2(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf2"))
 
     pairs = dataset_builder.general.make_pairs_trf3(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf3"))
 
-    pairs = dataset_builder.general.make_pairs_trf4(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_trf4"))
-
-    pairs = dataset_builder.general.make_pairs_radio_camara(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="radio_camara"))
-
-    pairs = dataset_builder.general.make_pairs_tcu(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_tcu"))
-
-    pairs = dataset_builder.general.make_pairs_mpm(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_min_mpm"))
-
     pairs = dataset_builder.general.make_pairs_radio_e_tv_justica()
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="radio_e_tv_justica"))
-
-    pairs = dataset_builder.general.make_pairs_mpt(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="news_min_mpt"))
-
-    pairs = dataset_builder.general.make_pairs_tv_camara(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="tv_camara"))
 
     pairs_dict = dataset_builder.general.make_pairs_ministerios(long_segments=args.long_segments)
     for tag, pairs in pairs_dict.items():
@@ -125,10 +125,16 @@ def main(args) -> None:
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="law_mentions"))
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="map2doc")
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_map2doc"))
+    dfs.append(
+        dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_map2doc")
+    )
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="clusterComments")
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_clusterComments"))
+    dfs.append(
+        dataset_builder.utils.gen_dataframe(
+            pairs, min_length=1, source_name="chatgpt_clusterComments"
+        )
+    )
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="ir")
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_ir"))
@@ -169,7 +175,9 @@ def main(args) -> None:
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="faq_senado"))
 
     pairs = dataset_builder.acronyms_and_aliases.make_pairs(long_segments=args.long_segments)
-    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="acronyms_and_aliases"))
+    dfs.append(
+        dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="acronyms_and_aliases")
+    )
 
     pairs_a, pairs_b = dataset_builder.leg_bills.make_pairs_fed_bills(debug=args.debug)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs_a, source_name="leg_bills_art_fed"))
@@ -177,8 +185,16 @@ def main(args) -> None:
 
     pairs_dict = dataset_builder.leg_bills.make_pairs_state_bills(debug=args.debug)
     for tag, (pairs_a, pairs_b) in pairs_dict.items():
-        dfs.append(dataset_builder.utils.gen_dataframe(pairs_a, source_name=f"leg_bills_art_{tag}", allow_empty=args.debug))
-        dfs.append(dataset_builder.utils.gen_dataframe(pairs_b, source_name=f"leg_bills_just_{tag}", allow_empty=True))
+        dfs.append(
+            dataset_builder.utils.gen_dataframe(
+                pairs_a, source_name=f"leg_bills_art_{tag}", allow_empty=args.debug
+            )
+        )
+        dfs.append(
+            dataset_builder.utils.gen_dataframe(
+                pairs_b, source_name=f"leg_bills_just_{tag}", allow_empty=True
+            )
+        )
 
     pairs = dataset_builder.int_agreements.make_pairs(long_segments=args.long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="int_agreements"))
@@ -187,7 +203,9 @@ def main(args) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Generate similar pairs of Brazilian legal data from Tesemõ corpus.")
+    parser = argparse.ArgumentParser(
+        "Generate similar pairs of Brazilian legal data from Tesemõ corpus."
+    )
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--long-segments", action="store_true")
     parser.add_argument("--cache-dir", default="./processed_data", type=str)

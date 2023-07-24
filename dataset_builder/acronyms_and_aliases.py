@@ -63,14 +63,19 @@ def make_pairs(long_segments: bool = False):
             "estatuto_empresa": "l12_estatutos/Estatuto_Nacional_da_Microempresae_da_Empresa_de_Pequeno_Porte.txt",
         }
 
-        doc_urn_to_uri = {k: os.path.join(utils.TESEMO_PATH, "legislativo", v) for k, v in doc_urn_to_uri.items()}
+        doc_urn_to_uri = {
+            k: os.path.join(utils.Config.TESEMO_PATH, "legislativo", v)
+            for k, v in doc_urn_to_uri.items()
+        }
         fn_fetch = lambda doc_urn: _fetch_doc_contents(doc_urn_to_uri[doc_urn], segmenter=segmenter)
 
     segs = [
         "Estatuto da Advocacia e da Ordem dos Advogados do Brasil",
         "LEI Nº 8. 906, DE 4 DE JULHO DE 1994. ( Vide ADIN 6278 )",
         "Dispõe sobre o Estatuto da Advocacia e a Ordem dos Advogados do Brasil ( OAB ).",
-        "Art. 1º São atividades privativas de advocacia :" if not long_segments else fn_fetch("estatuto_oab"),
+        "Art. 1º São atividades privativas de advocacia :"
+        if not long_segments
+        else fn_fetch("estatuto_oab"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -231,7 +236,9 @@ def make_pairs(long_segments: bool = False):
         "LEI N o 10. 406, DE 10 DE JANEIRO DE 2002",
         "Lei de Introdução às normas do Direito Brasileiro ( Vide Lei nº 14. 195, de 2021 )",
         "Institui o Código Civil.",
-        "Art. 1º Toda pessoa é capaz de direitos e deveres na ordem civil." if not long_segments else fn_fetch("codigo_civil"),
+        "Art. 1º Toda pessoa é capaz de direitos e deveres na ordem civil."
+        if not long_segments
+        else fn_fetch("codigo_civil"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -325,7 +332,9 @@ def make_pairs(long_segments: bool = False):
         "Código de Águas",
         "DECRETO Nº 24. 643, DE 10 DE JULHO DE 1934. ( Vide Decreto - Lei nº 852, de 1938 ) ( Vide Decreto - lei nº 3. 763, de 1941 ) ( Vide Decreto nº 2. 869, de 1998 )",
         "Decreta o Código de Águas.",
-        "Art. 1º As águas públicas podem ser de uso comum ou dominicais." if not long_segments else fn_fetch("codigo_aguas"),
+        "Art. 1º As águas públicas podem ser de uso comum ou dominicais."
+        if not long_segments
+        else fn_fetch("codigo_aguas"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -377,7 +386,9 @@ def make_pairs(long_segments: bool = False):
         "Código Comercial",
         "LEI Nº 556, DE 25 DE JUNHO DE 1850.",
         "Ordem do Juízo no processo comercial ( Vide Lei nº 1. 237, de 1864 ) ( Vide Decreto - lei n° 1. 608, de 1939 ) ( Vide Lei n° 5. 869, de 11. 1. 1973 )",
-        "Art. 1 - Podem comerciar no Brasil :" if not long_segments else fn_fetch("codigo_comercial"),
+        "Art. 1 - Podem comerciar no Brasil :"
+        if not long_segments
+        else fn_fetch("codigo_comercial"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
 
@@ -397,20 +408,34 @@ def make_pairs(long_segments: bool = False):
         )
     else:
         with open(
-            os.path.join(utils.TESEMO_PATH, "legislativo", "l13_constituicao_da_republica_federativa_do_brasil_de_1988.txt"),
+            os.path.join(
+                utils.Config.TESEMO_PATH,
+                "legislativo",
+                "l13_constituicao_da_republica_federativa_do_brasil_de_1988.txt",
+            ),
             "r",
         ) as f_in:
             segs = f_in.readlines(10000)
 
         pairs.append(("CONSTITUIÇÃO DA REPÚBLICA FEDERATIVA DO BRASIL DE 1988", "".join(segs[21:])))
 
-    df = pd.read_csv(os.path.join(utils.COMPLEMENTARY_DATADIR, "apelidos_de_lei.csv"), usecols=["Nome", "Apelido"])
+    df = pd.read_csv(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "apelidos_de_lei.csv"),
+        usecols=["Nome", "Apelido"],
+    )
     pairs.extend(df.values.tolist())
 
-    df = pd.read_csv(os.path.join(utils.COMPLEMENTARY_DATADIR, "apelidos_de_lei.csv"), usecols=["Nome", "Indexacao"])
+    df = pd.read_csv(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "apelidos_de_lei.csv"),
+        usecols=["Nome", "Indexacao"],
+    )
     pairs.extend(df.values.tolist())
 
-    df = pd.read_csv(os.path.join(utils.COMPLEMENTARY_DATADIR, "senado_leis_and_ementas.tsv"), index_col=0, sep="\t")
+    df = pd.read_csv(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "senado_leis_and_ementas.tsv"),
+        index_col=0,
+        sep="\t",
+    )
     pairs.extend(df.values.tolist())
 
     pairs.extend(
@@ -1133,7 +1158,10 @@ def make_pairs(long_segments: bool = False):
             ("Leis de Sistema de Cultura - Roraima", "(RR) Lei nº 1.033, de 22/03/2016"),
             ("Leis de Sistema de Cultura - Amapá", "(AM) Lei nº 2.137, de 02/03/2017"),
             ("Leis de Sistema de Cultura - Mato Grosso do Sul", "(MS) Lei nº 5.060, de 20/09/2017"),
-            ("Leis de Sistema de Cultura - Distrito Federal", "(DF) Lei Comp. nº 934, de 7/12/2017"),
+            (
+                "Leis de Sistema de Cultura - Distrito Federal",
+                "(DF) Lei Comp. nº 934, de 7/12/2017",
+            ),
             ("Leis de Sistema de Cultura - Santa Catarina", "(SC) Lei nº 17.449, de 10/01/2018"),
             ("Leis de Sistema de Cultura - Minas Gerais", "(MG) Lei nº 22.944, de 15/01/2018"),
             (

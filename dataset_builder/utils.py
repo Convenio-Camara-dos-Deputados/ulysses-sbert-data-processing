@@ -10,8 +10,10 @@ import nltk
 import colorama
 
 
-TESEMO_PATH = os.path.abspath("./tesemo_v2.1")
-COMPLEMENTARY_DATADIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+class Config:
+    TESEMO_PATH = os.path.abspath("./tesemo_v2.1")
+    COMPLEMENTARY_DATADIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+
 
 try:
     nltk.data.find("tokenizers/punkt.zip")
@@ -21,7 +23,9 @@ except LookupError:
 reg_vigorar = re.compile(r"passam?\s+a\s+vigorar", re.IGNORECASE)
 reg_dizeres = re.compile(r"seguintes\s*dizeres\s*:\s*$", re.IGNORECASE)
 reg_dots = re.compile(r"(?:\.\s*){6,}|…")
-reg_split_quotes = re.compile(f"(?<=[{string.punctuation}])\s*(?=[\u201C\u2018])|(?<=\.\s*[\u2019\u201D])")
+reg_split_quotes = re.compile(
+    f"(?<=[{string.punctuation}])\s*(?=[\u201C\u2018])|(?<=\.\s*[\u2019\u201D])"
+)
 reg_h_whitespace_spans = re.compile(r"\h{2,}")
 reg_empty_lines = re.compile(r"\n\h*(?=\n)|^\h*\n|\n\h*$")
 reg_cliffhanger = re.compile(r":[\s\"'\u201C\u2018\u2019\u201D]*$")
@@ -64,7 +68,9 @@ def inject_negative_pairs(
 ) -> pd.DataFrame:
     df_random = df.copy()
     df_random.iloc[:, col_ind_to_shuffle] = (
-        df_random.iloc[:, col_ind_to_shuffle].sample(frac=1.0, replace=False, random_state=random_state).values.tolist()
+        df_random.iloc[:, col_ind_to_shuffle]
+        .sample(frac=1.0, replace=False, random_state=random_state)
+        .values.tolist()
     )
 
     col_a = df_random.iloc[:, col_ind_as_ref].apply(lambda x: x.lower().strip())
@@ -98,6 +104,7 @@ def natural_sentence_tokenize(text: str, preprocess_whitespaces: bool = True) ->
             "arts",
             "profa",
             "profᵃ",
+            "dep",
             "sr",
             "sra",
             "srᵃ",
@@ -269,7 +276,9 @@ def gen_dataframe(
     ]
 
     lens = df.applymap(lambda x: len(x)).min(axis=1).values
-    df.loc[lens > max_length, :] = df.loc[lens > max_length, :].applymap(lambda x: f"{x[:max_length-3]}...").values
+    df.loc[lens > max_length, :] = (
+        df.loc[lens > max_length, :].applymap(lambda x: f"{x[:max_length-3]}...").values
+    )
 
     df = df.loc[min_length <= lens, :]
 
@@ -289,7 +298,9 @@ def _prepare_source_name(source_name: str) -> str:
     return reg_not_alphanumeric.sub("_", source_name.strip().upper())
 
 
-def fetch_further_leg_context(segs: list[str], start_i: int = 0, min_seg_length: int = 20) -> tuple[t.Optional[str], int]:
+def fetch_further_leg_context(
+    segs: list[str], start_i: int = 0, min_seg_length: int = 20
+) -> tuple[t.Optional[str], int]:
     if start_i >= len(segs):
         return None, start_i
 
@@ -306,7 +317,9 @@ def fetch_further_leg_context(segs: list[str], start_i: int = 0, min_seg_length:
         items.append(segs[i])
         i += 1
         while i < len(segs) and (
-            len(items[-1]) < min_seg_length or reg_cliffhanger.search(items[-1]) or reg_dots.search(items[-1])
+            len(items[-1]) < min_seg_length
+            or reg_cliffhanger.search(items[-1])
+            or reg_dots.search(items[-1])
         ):
             items.append(segs[i])
             i += 1
@@ -473,7 +486,11 @@ def fetch_questions_in_segments(
 
     j = start_i
     while j < len(segs) - 1:
-        if reg_questions.match(segs[j]) and len(segs[j + 1]) > 64 and "?" not in segs[j + 1].rstrip()[-2:]:
+        if (
+            reg_questions.match(segs[j])
+            and len(segs[j + 1]) > 64
+            and "?" not in segs[j + 1].rstrip()[-2:]
+        ):
             new_pairs.append((f"{context}{segs[j]}", segs[j + 1]))
             j += 1
 

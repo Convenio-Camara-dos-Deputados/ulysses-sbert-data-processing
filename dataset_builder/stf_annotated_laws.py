@@ -1,7 +1,6 @@
 import re
 import os
 
-import requests
 import bs4
 import colorama
 
@@ -9,7 +8,9 @@ from . import utils
 
 
 def make_pairs_const(iters_to_print: int = 30) -> list[tuple[str, str]]:
-    with open(os.path.join(utils.COMPLEMENTARY_DATADIR, "const_comentada.html"), "r") as f_in:
+    with open(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "const_comentada.html"), "r"
+    ) as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     apresentacoes = parsed.find_all("div", id=re.compile(r"apresentacao[0-9]+"))
@@ -53,7 +54,7 @@ def make_pairs_const(iters_to_print: int = 30) -> list[tuple[str, str]]:
 
 
 def _make_pairs(urn: str, law_name: str, iters_to_print: int = 10) -> list[tuple[str, str]]:
-    uri = os.path.join(utils.COMPLEMENTARY_DATADIR, urn)
+    uri = os.path.join(utils.Config.COMPLEMENTARY_DATADIR, urn)
 
     with open(os.path.abspath(uri), "r") as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")

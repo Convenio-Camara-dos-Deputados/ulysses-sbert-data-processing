@@ -11,7 +11,7 @@ reg_preproc_comments = re.compile(r"^[^a-zçáéíóúàâôêãẽõü]+|[\"']\
 
 
 def make_pairs(task: str) -> list[tuple[str, str]]:
-    uris = glob.glob(os.path.join(utils.COMPLEMENTARY_DATADIR, f"chatgpt/{task}*tsv"))
+    uris = glob.glob(os.path.join(utils.Config.COMPLEMENTARY_DATADIR, f"chatgpt/{task}*tsv"))
 
     assert uris
 

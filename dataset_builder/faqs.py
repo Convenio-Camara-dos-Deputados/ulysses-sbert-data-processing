@@ -15,7 +15,7 @@ from . import utils
 def make_pairs_senado() -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
-    with open(os.path.join(utils.COMPLEMENTARY_DATADIR, "senado_faq.html"), "r") as f_in:
+    with open(os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "senado_faq.html"), "r") as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     for section in parsed.find_all("div", class_="panel-default"):
@@ -38,7 +38,9 @@ def make_pairs_senado() -> list[tuple[str, str]]:
 def make_pairs_portal_da_transp() -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
-    with open(os.path.join(utils.COMPLEMENTARY_DATADIR, "portal_da_transparencia_faq.html"), "r") as f_in:
+    with open(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "portal_da_transparencia_faq.html"), "r"
+    ) as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     for section in parsed.find_all("div", class_="row"):
@@ -78,7 +80,9 @@ def make_pairs_portal_da_transp() -> list[tuple[str, str]]:
 def make_pairs_receita_federal() -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
-    with open(os.path.join(utils.COMPLEMENTARY_DATADIR, "receita_federal_faq.html"), "r") as f_in:
+    with open(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "receita_federal_faq.html"), "r"
+    ) as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     for section in parsed.find_all("div", class_="content"):
@@ -100,14 +104,18 @@ def make_pairs_receita_federal() -> list[tuple[str, str]]:
 
 
 def make_pairs_bc() -> list[tuple[str, str]]:
-    df = pd.read_csv(os.path.join(utils.COMPLEMENTARY_DATADIR, "bc_faqs.tsv"), sep="\t", index_col=0)
+    df = pd.read_csv(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "bc_faqs.tsv"), sep="\t", index_col=0
+    )
     df = df.applymap(lambda x: re.sub("^Saiba mais[^\n]*$", "", x, flags=re.MULTILINE))
     pairs = df.values.tolist()
     assert len(pairs)
     return pairs
 
 
-def _make_pairs_gov_standard_html(input_uri: str, source: t.Optional[str] = None) -> list[tuple[str, str]]:
+def _make_pairs_gov_standard_html(
+    input_uri: str, source: t.Optional[str] = None
+) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
     with open(os.path.abspath(input_uri), "r") as f_in:
@@ -155,35 +163,50 @@ def _make_pairs_gov_standard_html(input_uri: str, source: t.Optional[str] = None
 
 
 def make_pairs_mec() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "min_ed_faqs.html"), source="MEC")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "min_ed_faqs.html"), source="MEC"
+    )
 
 
 def make_pairs_midr() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "min_int_e_dev_reg_faqs.html"), source="MDR")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "min_int_e_dev_reg_faqs.html"),
+        source="MDR",
+    )
 
 
 def make_pairs_mdh() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "min_dir_hum.html"), source="MDH")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "min_dir_hum.html"), source="MDH"
+    )
 
 
 def make_pairs_mds() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "mds_faq.html"), source="MDH")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "mds_faq.html"), source="MDH"
+    )
 
 
 def make_pairs_defesa() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "defesa_faq.html"), source="MDH")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "defesa_faq.html"), source="MDH"
+    )
 
 
 def make_pairs_cidades() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "cidades_faq.html"), source="CIDADES")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "cidades_faq.html"), source="CIDADES"
+    )
 
 
 def make_pairs_mcom() -> list[tuple[str, str]]:
-    return _make_pairs_gov_standard_html(os.path.join(utils.COMPLEMENTARY_DATADIR, "mcom_faq.html"), source="MCOM")
+    return _make_pairs_gov_standard_html(
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "mcom_faq.html"), source="MCOM"
+    )
 
 
 def make_pairs_general() -> dict[str, list[tuple[str, str]]]:
-    with open(os.path.join(utils.TESEMO_PATH, "outros/o11_faqs.txt"), "r") as f_in:
+    with open(os.path.join(utils.Config.TESEMO_PATH, "outros/o11_faqs.txt"), "r") as f_in:
         text = f_in.read()
 
     pairs: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
