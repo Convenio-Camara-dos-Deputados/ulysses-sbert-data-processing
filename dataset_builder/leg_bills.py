@@ -138,7 +138,7 @@ def make_pairs_fed_bills(
 
 
 def fn_patch_return(fn):
-    def gn(*args, **kwargs):
+    def gn(*args, **kwargs) -> tuple[str | None, str | None]:
         ret = fn(*args, **kwargs)
         return ret or (None, None)
 
@@ -146,7 +146,7 @@ def fn_patch_return(fn):
 
 
 @fn_patch_return
-def fn_doc_name_ac(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str]:
+def fn_doc_name_ac(segs: list[str], *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     for i, seg in enumerate(segs):
         if reg_someone.match(seg):
             return segs[i - 2], segs[i - 1]
@@ -154,8 +154,8 @@ def fn_doc_name_ac(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str
 
 @fn_patch_return
 def fn_doc_name_al(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     i = first_art_ind - 1
     reg_skip = re.compile(
         "Este texto não|Autora?:|[AO] GOVERNADORA? DO ESTADO|PUBLICAD[OA] NO DOE|O PRESIDENTE",
@@ -169,7 +169,7 @@ def fn_doc_name_al(
 
 
 @fn_patch_return
-def fn_doc_name_am(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str]:
+def fn_doc_name_am(segs: list[str], *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     for j, seg in enumerate(segs):
         if reg_someone.match(seg):
             break
@@ -194,7 +194,7 @@ def fn_doc_name_am(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str
 
 
 @fn_patch_return
-def fn_doc_name_ap(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str]:
+def fn_doc_name_ap(segs: list[str], *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     for j, seg in enumerate(segs):
         if reg_someone.match(seg):
             break
@@ -212,8 +212,8 @@ def fn_doc_name_ap(segs: list[str], *args: any, **kwargs: any) -> tuple[str, str
 
 @fn_patch_return
 def fn_doc_name_es(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     i = first_art_ind - 3
     while i >= 0 and reg_someone.match(segs[i]):
         i -= 1
@@ -229,8 +229,8 @@ def fn_doc_name_es(
 
 @fn_patch_return
 def fn_doc_name_go(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|Mensagem de Veto|Revogad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -242,8 +242,8 @@ def fn_doc_name_go(
 
 @fn_patch_return
 def fn_doc_name_ma(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("A MESA DA ASSEMBL[ÉE]IA|ESTADO DO MARANHÃO ASSEMBL[ÉE]IA", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -255,8 +255,8 @@ def fn_doc_name_ma(
 
 @fn_patch_return
 def fn_doc_name_mg(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "Palácio da Inconfidência|Belo Horizonte, aos|Considerando|DECRETA", re.IGNORECASE
     )
@@ -270,8 +270,8 @@ def fn_doc_name_mg(
 
 @fn_patch_return
 def fn_doc_name_ms(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Revogad|Publicad|[AO] GOVERNADOR|DECRETA", re.IGNORECASE)
     i = first_art_ind - 2
     while i >= 1 and (reg_skip.match(segs[i]) or reg_skip.match(segs[i - 1])):
@@ -283,8 +283,8 @@ def fn_doc_name_ms(
 
 @fn_patch_return
 def fn_doc_name_mt(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Autoria:|Autores:|Autora?s?:", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -296,8 +296,8 @@ def fn_doc_name_mt(
 
 @fn_patch_return
 def fn_doc_name_pa(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|Mensagem de Veto|Revogad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -309,8 +309,8 @@ def fn_doc_name_pa(
 
 @fn_patch_return
 def fn_doc_name_pb(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Autoria:|Autores:|Autora?s?:", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -322,8 +322,8 @@ def fn_doc_name_pb(
 
 @fn_patch_return
 def fn_doc_name_pe(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|DECRETA|CONSIDERANDO", re.IGNORECASE)
     i = first_art_ind - 2
     while i >= 1 and (
@@ -340,8 +340,8 @@ def fn_doc_name_pe(
 
 @fn_patch_return
 def fn_doc_name_pr(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile("Publicad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -353,8 +353,8 @@ def fn_doc_name_pr(
 
 @fn_patch_return
 def fn_doc_name_sc(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile(
         r".{,45}:|Documentação|Alterad|Revogad|Consolidad|Veto|LIVRO|TÍTULO|CAPÍTULO|SEÇÃO|SUBSEÇÃO|Procedência|Natureza|\bD[\s.]*O\b",
         re.IGNORECASE,
@@ -369,8 +369,8 @@ def fn_doc_name_sc(
 
 @fn_patch_return
 def fn_doc_name_sp(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "(?:Re)?publicad[oa]|Revogad[oa]|Prorrogad[oa]|Alterad[oa]|Rejeitad[oa]|Consolidad[oa]|Regulamentad[oa]|"
         "Este texto não|"
@@ -408,8 +408,8 @@ def fn_doc_name_sp(
 
 @fn_patch_return
 def fn_doc_name_to(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile(
         r"Publicad|Alterad|Regulamentad|Revogad|Consolidad|Veto|LIVRO|TÍTULO|CAPÍTULO|SEÇÃO|SUBSEÇÃO|\s*\*",
         re.IGNORECASE,
@@ -428,8 +428,8 @@ def fn_doc_name_to(
 
 @fn_patch_return
 def fn_doc_name_default(
-    segs: list[str], first_art_ind: int, *args: any, **kwargs: any
-) -> tuple[str, str]:
+    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
+) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "(?:Re)?publicad[oa]|Revogad[oa]|Prorrogad[oa]|Alterad[oa]|Rejeitad[oa]|Consolidad[oa]|Regulamentad[oa]|"
         "Este texto não|"

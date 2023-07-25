@@ -25,14 +25,19 @@ def make_pairs(long_segments: bool = False) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
     pbar = tqdm.tqdm(summary_uris)
-    iters_to_print = max(1, int(len(pbar) * 0.05))
     hits = 0
-    hits_to_print = iters_to_print
 
+    iters_to_print: int | float
+    if utils.Config.IT_TO_PRINT:
+        iters_to_print = int(utils.Config.IT_TO_PRINT * len(pbar))
+    else:
+        iters_to_print = float("+inf")
+
+    hits_to_print = iters_to_print
     dir_speech_content = os.path.join(base_dir, "conteudo_discursos_subset_a")
 
     for i, summ_uri in enumerate(pbar, 1):
-        with open(summ_uri, "r") as f_in:
+        with open(summ_uri, "r", encoding="utf-8") as f_in:
             summ_content = f_in.read()
 
         if long_segments:
@@ -43,7 +48,8 @@ def make_pairs(long_segments: bool = False) -> list[tuple[str, str]]:
         if not sents_summ or "Discurso proferido" in sents_summ[0]:
             continue
 
-        with open(os.path.join(dir_speech_content, os.path.basename(summ_uri)), "r") as f_in:
+        content_uri = os.path.join(dir_speech_content, os.path.basename(summ_uri))
+        with open(content_uri, "r", encoding="utf-8") as f_in:
             content = reg_start_noise.sub("", reg_spaces.sub("", f_in.read()))
 
         if long_segments:

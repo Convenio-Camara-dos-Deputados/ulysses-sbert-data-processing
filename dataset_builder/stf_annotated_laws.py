@@ -7,16 +7,22 @@ import colorama
 from . import utils
 
 
-def make_pairs_const(iters_to_print: int = 30) -> list[tuple[str, str]]:
+def make_pairs_const() -> list[tuple[str, str]]:
     with open(
-        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "const_comentada.html"), "r"
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "const_comentada.html"),
+        "r",
+        encoding="utf-8",
     ) as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     apresentacoes = parsed.find_all("div", id=re.compile(r"apresentacao[0-9]+"))
     apresentacoes.pop(0)
     last_art = ""
-    pairs = []
+    pairs: list[tuple[str, str]] = []
+
+    iters_to_print = 0
+    if utils.Config.IT_TO_PRINT:
+        iters_to_print = int(utils.Config.IT_TO_PRINT * len(apresentacoes))
 
     for i, apresentacao in enumerate(apresentacoes):
         for child in apresentacao.find_all("div", recursive=False):
@@ -42,7 +48,7 @@ def make_pairs_const(iters_to_print: int = 30) -> list[tuple[str, str]]:
 
                 pairs.append((f"(CF/1988) {content}", comment))
 
-            if i % iters_to_print == 0 and comments:
+            if iters_to_print and i % iters_to_print == 0 and comments:
                 print(colorama.Fore.YELLOW, pairs[-1][0], colorama.Style.RESET_ALL, sep="")
                 for comment in comments:
                     print(">>>", pairs[-1][1])
@@ -53,19 +59,23 @@ def make_pairs_const(iters_to_print: int = 30) -> list[tuple[str, str]]:
     return pairs
 
 
-def _make_pairs(urn: str, law_name: str, iters_to_print: int = 10) -> list[tuple[str, str]]:
+def _make_pairs(urn: str, law_name: str) -> list[tuple[str, str]]:
     uri = os.path.join(utils.Config.COMPLEMENTARY_DATADIR, urn)
 
-    with open(os.path.abspath(uri), "r") as f_in:
+    with open(os.path.abspath(uri), "r", encoding="utf-8") as f_in:
         parsed = bs4.BeautifulSoup(f_in.read(), "html.parser")
 
     items = parsed.find("section", id="conteudo").find("div").find("div")
     items = items.find_all("div", class_=re.compile(r"^(?:titulo|com)$"), recursive=False)
     last_art = ""
-    pairs = []
+    pairs: list[tuple[str, str]] = []
+
+    iters_to_print = 0
+    if utils.Config.IT_TO_PRINT:
+        iters_to_print = int(utils.Config.IT_TO_PRINT * len(items))
 
     for i, item in enumerate(items):
-        print_iter = i % iters_to_print == 0
+        print_iter = iters_to_print and (i % iters_to_print == 0)
 
         if item["class"][0] == "titulo":
             child = item.find("div")
@@ -91,25 +101,22 @@ def _make_pairs(urn: str, law_name: str, iters_to_print: int = 10) -> list[tuple
     return pairs
 
 
-def make_pairs_oab(iters_to_print: int = 10) -> list[tuple[str, str]]:
+def make_pairs_oab() -> list[tuple[str, str]]:
     return _make_pairs(
         urn="oab_comentada.html",
-        iters_to_print=iters_to_print,
         law_name="LEI Nº 8.906/1994 - Estatuto da OAB",
     )
 
 
-def make_pairs_lei_9882_1999(iters_to_print: int = 10) -> list[tuple[str, str]]:
+def make_pairs_lei_9882_1999() -> list[tuple[str, str]]:
     return _make_pairs(
         urn="lei_9882_1999_comentada.html",
-        iters_to_print=iters_to_print,
         law_name="LEI Nº 9882/1999",
     )
 
 
-def make_pairs_lei_9868_1999(iters_to_print: int = 10) -> list[tuple[str, str]]:
+def make_pairs_lei_9868_1999() -> list[tuple[str, str]]:
     return _make_pairs(
         urn="lei_9868_1999_comentada.html",
-        iters_to_print=iters_to_print,
         law_name="LEI Nº 9869/1999",
     )

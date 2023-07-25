@@ -12,8 +12,8 @@ def make_pairs(long_segments: bool = False) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
 
     pbar = tqdm.tqdm(
-        glob.glob(os.path.joint(utils.Config.TESEMO_PATH, "./outros/o5_acordos_exteriores/*.txt")),
-        desc="(int_agreements)",
+        glob.glob(os.path.join(utils.Config.TESEMO_PATH, "./outros/o5_acordos_exteriores/*.txt")),
+        desc="int_agreements",
     )
 
     for i, uri in enumerate(pbar):

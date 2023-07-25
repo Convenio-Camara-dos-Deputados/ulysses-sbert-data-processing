@@ -15,8 +15,8 @@ def _fetch_doc_contents(uri: str, segmenter) -> str:
     return "\n".join(segs[i:])
 
 
-def make_pairs(long_segments: bool = False):
-    pairs = []
+def make_pairs(long_segments: bool = False) -> tuple[str, str]:
+    pairs: list[tuple[str, str]] = []
 
     if long_segments:
         import segmentador

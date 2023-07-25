@@ -13,6 +13,7 @@ import colorama
 class Config:
     TESEMO_PATH = os.path.abspath("./tesemo_v2.1")
     COMPLEMENTARY_DATADIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+    IT_TO_PRINT = 0.20
 
 
 try:
@@ -275,7 +276,7 @@ def gen_dataframe(
         :,
     ]
 
-    lens = df.applymap(lambda x: len(x)).min(axis=1).values
+    lens = df.applymap(len).min(axis=1).values
     df.loc[lens > max_length, :] = (
         df.loc[lens > max_length, :].applymap(lambda x: f"{x[:max_length-3]}...").values
     )

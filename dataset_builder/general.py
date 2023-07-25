@@ -5,7 +5,6 @@ import re
 import collections
 
 import pandas as pd
-import numpy as np
 import tqdm
 
 from . import utils
@@ -88,8 +87,8 @@ def _make_pairs_generic(
     short_segment_inds: list[tuple[int, int, int]],
     fetch_law_in_segments: bool,
     fetch_questions_in_segments: bool,
-    fetch_law_in_segments_kwargs: dict[str, any] | None = None,
-    fetch_questions_in_segments_kwargs: dict[str, any] | None = None,
+    fetch_law_in_segments_kwargs: dict[str, t.Any] | None = None,
+    fetch_questions_in_segments_kwargs: dict[str, t.Any] | None = None,
     fn_text_preproc: t.Callable[[str], str] | None = None,
     reg_filter_uris: re.Pattern | None = None,
     min_seg_len: int = 1,
@@ -117,7 +116,7 @@ def _make_pairs_generic(
 
     if fetch_law_in_segments and not fetch_law_in_segments_kwargs:
         raise ValueError(
-            '"fetch_law_in_segments_kwargs" must be provided ' 'when "fetch_law_in_segments=True".'
+            '"fetch_law_in_segments_kwargs" must be provided when "fetch_law_in_segments=True".'
         )
 
     if not fetch_law_in_segments and fetch_law_in_segments_kwargs is not None:
@@ -151,13 +150,13 @@ def _make_pairs_generic(
     if it_to_print is not None and 0.0 < it_to_print < 1.0:
         it_to_print = int(round(it_to_print * len(uris)))
 
-    n = it_to_print or float("+inf")
+    n: float | int = it_to_print or float("+inf")
 
-    for uri in tqdm.tqdm(uris, desc=source_name):
+    for file_uri in tqdm.tqdm(uris, desc=source_name):
         n -= 1
 
         segs = _read_file_segments(
-            uri,
+            file_uri,
             fn_text_preproc=fn_text_preproc,
             min_seg_len=min_seg_len,
             reg_banned_patterns=reg_banned_patterns,
@@ -174,7 +173,7 @@ def _make_pairs_generic(
             if isinstance(document_full_skip_inds, int):
                 document_full_skip_inds = [document_full_skip_inds]
 
-            for i in document_full_skip_inds:
+            for i in document_full_skip_inds:  # type: ignore
                 if len(segs) > i and reg_document_full_skip.search(segs[i]):
                     skip_document = True
                     break
@@ -211,18 +210,26 @@ def _make_pairs_generic(
                         pairs.append((seg_a, seg_b))
 
             if fetch_law_in_segments:
-                pairs.extend(utils.fetch_laws_in_segments(segs, **fetch_law_in_segments_kwargs))
+                pairs.extend(
+                    utils.fetch_laws_in_segments(
+                        segs,
+                        **fetch_law_in_segments_kwargs,  # type: ignore
+                    )
+                )
 
             if fetch_questions_in_segments:
                 pairs.extend(
-                    utils.fetch_questions_in_segments(segs, **fetch_questions_in_segments_kwargs)
+                    utils.fetch_questions_in_segments(
+                        segs,
+                        **fetch_questions_in_segments_kwargs,  # type: ignore
+                    )
                 )
 
-        if n <= 0 and len(pairs):
+        if it_to_print and n <= 0 and pairs:
             n = it_to_print
             utils.print_example(*pairs[-1])
 
-    if not len(pairs):
+    if not pairs:
         raise ValueError(f"No pair has been generated ({source_name=}, {uri=}).")
 
     return pairs
@@ -231,14 +238,13 @@ def _make_pairs_generic(
 def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, str]]]:
     pairs = collections.defaultdict(list)
 
-    reg_ministerio = re.compile(r"https[^a-z]+www[^a-z]+gov[^a-z]+br[^a-z]+([a-z]+)", re.IGNORECASE)
     reg_foto = re.compile(r"[^\.a-zç]*\s*Fotos?:.+$", re.IGNORECASE)
     base_dir = os.path.join(
         utils.Config.TESEMO_PATH, "outros/o1_noticias_governamentais/ministerios"
     )
 
     for uri in tqdm.tqdm(glob.glob(os.path.join(base_dir, "**", "*.txt"), recursive=True)):
-        with open(uri, "r") as f_in:
+        with open(uri, "r", encoding="utf-8") as f_in:
             segs = [item.strip() for item in f_in.read().strip().split("\n")]
 
         if len(segs) < 3:
@@ -292,7 +298,9 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
     return pairs
 
 
-def make_pairs_tv_camara(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tv_camara(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_tv_camara"
+
     reg_banned_patterns = re.compile(r"Créditos?")
 
     reg_document_full_skip = re.compile(
@@ -312,7 +320,7 @@ def make_pairs_tv_camara(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o8_tv_camara",
-        source_name="news_tv_camara",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -333,27 +341,34 @@ def make_pairs_tv_camara(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_radio_e_tv_justica() -> list[tuple[str, str]]:
+def make_pairs_radio_e_tv_justica(
+    **kwargs,
+) -> tuple[list[tuple[str, str]], str]:  # pylint: disable='unused-argument'
     df = pd.read_csv(
         os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "radio_e_tv_justica_ementas.tsv"),
         sep="\t",
         index_col=0,
     )
     pairs = df.values.tolist()
-    assert len(pairs)
-    return pairs
+
+    if not pairs:
+        raise ValueError(f"No pair has been generated for '{source_name=}'.")
+
+    return pairs, "radio_e_tv_justica"
 
 
-def make_pairs_mpt(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_mpt(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_mpt"
+
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/mpt_ministerio_publico_do_trabalho",
-        source_name="news_mpt",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -376,18 +391,20 @@ def make_pairs_mpt(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_mpm(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_mpm(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_mpm"
+
     re_banned_patterns = re.compile(r"voltar\.+")
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/mpm_ministerio_publico_militar",
-        source_name="news_mpm",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -409,18 +426,20 @@ def make_pairs_mpm(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_tcu(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tcu(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_tcu"
+
     reg_document_full_skip = re.compile(r"Destaques da sessão plenária")
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/tcu_tribunal_de_contas_da_uniao",
-        source_name="news_tcu",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -443,13 +462,15 @@ def make_pairs_tcu(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_radio_camara(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_radio_camara(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "radio_camara"
+
     reg_document_full_skip = re.compile(
         r"(?:"
         r"loc[-–:]|"
@@ -471,7 +492,7 @@ def make_pairs_radio_camara(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o3_radio_camara",
-        source_name="radio_camara",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -493,18 +514,20 @@ def make_pairs_radio_camara(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_postproc=fn_seg_postproc,
         apply_preproc_before_banned_patterns=False,
         long_segment_join_string=" ",
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_trf4(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf4(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf4"
+
     reg_document_full_skip = re.compile("Agenda da presidente do TRF4", re.IGNORECASE)
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/trf4_tribunal_regional_federal_da_4_regiao",
-        source_name="news_trf4",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -526,21 +549,23 @@ def make_pairs_trf4(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_trf3(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf3(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf3"
+
     pairs: list[tuple[str, str]] = []
 
     source_dir = os.path.join(
         utils.Config.TESEMO_PATH,
         "outros/o1_noticias_governamentais/trf3_tribunal_regional_federal_da_3_regiao/*.txt",
     )
-    for uri in tqdm.tqdm(glob.glob(source_dir)):
-        with open(uri, "r") as f_in:
+    for uri in tqdm.tqdm(glob.glob(source_dir), desc=source_name):
+        with open(uri, "r", encoding="utf-8") as f_in:
             segs = [item.strip() for item in f_in.read().strip().split("\n") if item.strip()]
 
         if long_segments:
@@ -575,19 +600,23 @@ def make_pairs_trf3(*, long_segments: bool) -> list[tuple[str, str]]:
                 pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=9, refs_i=[5, 7]))
                 pairs.extend(utils.fetch_questions_in_segments(segs, start_i=8, context_i=5))
 
-    assert len(pairs)
-    return pairs
+    if not pairs:
+        raise ValueError(f"No pair has been generated for '{source_name=}'.")
+
+    return pairs, source_name
 
 
-def make_pairs_trf2(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf2(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf2"
+
     pairs: list[tuple[str, str]] = []
 
     source_dir = os.path.join(
         utils.Config.TESEMO_PATH,
         "outros/o1_noticias_governamentais/trf2_tribunal_regional_federal_da_2_regiao/*.txt",
     )
-    for uri in tqdm.tqdm(glob.glob(source_dir)):
-        with open(uri, "r") as f_in:
+    for uri in tqdm.tqdm(glob.glob(source_dir), desc=source_name):
+        with open(uri, "r", encoding="utf-8") as f_in:
             segs = [item.strip() for item in f_in.read().strip().split("\n") if item.strip()]
 
         if long_segments:
@@ -629,11 +658,15 @@ def make_pairs_trf2(*, long_segments: bool) -> list[tuple[str, str]]:
                 pairs.extend(utils.fetch_laws_in_segments(segs=segs, start_i=5, refs_i=[1, 3]))
                 pairs.extend(utils.fetch_questions_in_segments(segs, start_i=4, context_i=1))
 
-    assert len(pairs)
-    return pairs
+    if not pairs:
+        raise ValueError(f"No pair has been generated for '{source_name=}'.")
+
+    return pairs, source_name
 
 
-def make_pairs_trf1(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf1(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf1"
+
     pairs: list[tuple[str, str]] = []
 
     reg_split_1 = re.compile(
@@ -647,7 +680,6 @@ def make_pairs_trf1(*, long_segments: bool) -> list[tuple[str, str]]:
     )
 
     def fn_text_preproc(x: str) -> str:
-        x = x
         x = reg_split_1.sub("\n", x, count=1)
         x = reg_split_2.sub("\n", x, count=1)
         return x
@@ -662,7 +694,7 @@ def make_pairs_trf1(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/trf1_tribunal_regional_federal_da_1_regiao",
-        source_name="news_trf1",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=fn_text_preproc,
         long_segments=long_segments,
@@ -684,13 +716,15 @@ def make_pairs_trf1(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_stj(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_stj(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_stj"
+
     reg_banned_patterns = re.compile(r"Atualizad[oa] em|^[0-9]{2}/[0-9]{2}")
 
     def fn_seg_postproc(segs: list[str]) -> list[str]:
@@ -700,7 +734,7 @@ def make_pairs_stj(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/stj_superior_tribunal_de_justica",
-        source_name="news_stj",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -723,16 +757,18 @@ def make_pairs_stj(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_postproc=fn_seg_postproc,
         apply_preproc_before_banned_patterns=False,
         long_segment_join_string=" ",
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_tse(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tse(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_tse"
+
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/tse_tribunal_superior_eleitoral",
-        source_name="news_tse",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -754,16 +790,18 @@ def make_pairs_tse(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_cnmp(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_cnmp(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_cnmp"
+
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/cnmp_conselho_nacional_do_ministerio_publico",
-        source_name="news_cnmp",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -785,16 +823,18 @@ def make_pairs_cnmp(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_bc(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_bc(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_bc"
+
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/banco_central",
-        source_name="news_bc",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -816,13 +856,17 @@ def make_pairs_bc(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_camara_noticias_comments() -> list[tuple[str, str]]:
+def make_pairs_camara_comments(
+    **kwargs,
+) -> tuple[list[tuple[str, str]], str]:  # pylint: disable='unused-argument'
+    source_name = "news_camara_comments"
+
     pairs: list[tuple[str, str]] = []
 
     reg = re.compile(r"https_www_camara_leg_br_noticias_\d+_")
@@ -830,8 +874,8 @@ def make_pairs_camara_noticias_comments() -> list[tuple[str, str]]:
         utils.Config.TESEMO_PATH,
         "outros/o1_noticias_governamentais/comentarios_noticias_camara_dos_deputados/*.txt",
     )
-    for uri in tqdm.tqdm(glob.glob(source_dir), desc="news_camara_comments"):
-        with open(uri, "r") as f_in:
+    for uri in tqdm.tqdm(glob.glob(source_dir), desc=source_name):
+        with open(uri, "r", encoding="utf-8") as f_in:
             segs = f_in.read().strip().split("\n")
 
         split_1 = reg.sub("", os.path.basename(uri)).replace(".txt", "").replace("_", " ")
@@ -840,14 +884,18 @@ def make_pairs_camara_noticias_comments() -> list[tuple[str, str]]:
             if len(split_2) >= 30:
                 pairs.append((split_1, split_2))
 
-    assert len(pairs)
-    return pairs
+    if not pairs:
+        raise ValueError(f"No pair has been generated for '{source_name=}'.")
+
+    return pairs, source_name
 
 
-def make_pairs_camara_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_camara(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_camara"
+
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/camara_dos_deputados",
-        source_name="news_camara",
+        source_name=source_name,
         reg_filter_uris=None,
         fn_text_preproc=None,
         long_segments=long_segments,
@@ -870,13 +918,15 @@ def make_pairs_camara_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_senado_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_senado(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_senado"
+
     reg_split = re.compile(
         r"^\s*(?:Saiba mais|Buscar|Mais vídeos|MAIS NOTÍCIAS SOBRE|Mais informações a seguir|Mais vistas|Últimas:)$",
         re.IGNORECASE | re.MULTILINE,
@@ -905,11 +955,11 @@ def make_pairs_senado_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/senado_federal",
-        source_name="news_senado",
+        source_name=source_name,
         reg_filter_uris=reg_filter_uris,
         fn_text_preproc=fn_text_preproc,
         long_segments=long_segments,
-        long_segment_inds=(0, slice(1, None), 64),
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
             (0, 1, 48),
             (2, 1, 64),
@@ -927,13 +977,15 @@ def make_pairs_senado_noticias(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_stf(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_stf(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_stf"
+
     reg_banned_patterns = re.compile(
         r"^.{,80}atualizado há"
         r"|pessoas já viram isso"
@@ -953,7 +1005,7 @@ def make_pairs_stf(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/stf_superior_tribunal_federal",
-        source_name="news_stf",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
@@ -973,13 +1025,15 @@ def make_pairs_stf(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_stm(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_stm(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_stm"
+
     reg_banned_patterns = re.compile(
         r"\d{2}/\d{2}/\d{4}$"
         r"|Imprimir\s*E-mail\s*"
@@ -994,7 +1048,7 @@ def make_pairs_stm(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/stm_superior_tribunal_militar",
-        source_name="news_stm",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
@@ -1014,13 +1068,15 @@ def make_pairs_stm(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_tst(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tst(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_tst"
+
     reg_banned_patterns = re.compile(
         r"Esse conteúdo não está disponível sem cookies"
         r"|null$"
@@ -1034,7 +1090,7 @@ def make_pairs_tst(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/tst_tribunal_superior_do_trabalho",
-        source_name="news_tst",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
@@ -1054,13 +1110,15 @@ def make_pairs_tst(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_tst_radio(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tst_radio(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "tst_radio"
+
     reg_document_full_skip = re.compile(r"Trabalho e Justiça", re.IGNORECASE)
 
     reg_banned_patterns = re.compile(
@@ -1094,7 +1152,7 @@ def make_pairs_tst_radio(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o7_radio_tst",
-        source_name="radio_tst",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(0, slice(1, None), 32),
         short_segment_inds=[
@@ -1113,13 +1171,15 @@ def make_pairs_tst_radio(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_tst_tv(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_tst_tv(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "tst_tv"
+
     reg_banned_patterns = re.compile(
         r"^null$"
         r"|^\s*Esse conteúdo não está disponível sem cookies"
@@ -1151,7 +1211,7 @@ def make_pairs_tst_tv(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o10_tst_tv",
-        source_name="tst_tv",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(0, slice(1, None), 21),
         short_segment_inds=[
@@ -1170,13 +1230,15 @@ def make_pairs_tst_tv(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_trf6(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf6(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf6"
+
     reg_noise_patterns = re.compile(r"Início\s*»\s*", re.IGNORECASE)
 
     def fn_seg_preproc(x: str) -> str:
@@ -1185,7 +1247,7 @@ def make_pairs_trf6(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/trf6_tribunal_regional_federal_da_6_regiao",
-        source_name="news_trf6",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
@@ -1205,13 +1267,15 @@ def make_pairs_trf6(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=False,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_trf5(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_trf5(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_trf5"
+
     reg_noise_patterns = re.compile(r"Início\s*»\s*", re.IGNORECASE)
     reg_banned_patterns = re.compile("Última atualização:|^Por:", re.IGNORECASE)
 
@@ -1227,7 +1291,7 @@ def make_pairs_trf5(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/trf5_tribunal_regional_federal_da_5_regiao",
-        source_name="news_trf5",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 2), slice(2, None), 64),
         short_segment_inds=[
@@ -1249,13 +1313,15 @@ def make_pairs_trf5(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_postproc=fn_seg_postproc,
         apply_preproc_before_banned_patterns=False,
         long_segment_join_string=" ",
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_onu(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_onu(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_onu"
+
     reg_banned_patterns = re.compile(
         r"Legenda:|Foto:|Acesse também o|\[embed\]|\[caption",
         re.IGNORECASE,
@@ -1273,7 +1339,7 @@ def make_pairs_onu(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/onu_brasil",
-        source_name="news_onu",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(9, 13), slice(13, None), 64),
         short_segment_inds=[
@@ -1294,13 +1360,15 @@ def make_pairs_onu(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
 
 
-def make_pairs_capes(*, long_segments: bool) -> list[tuple[str, str]]:
+def make_pairs_capes(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_capes"
+
     reg_banned_patterns = re.compile(
         r"Compartilhe"
         r"|link para copiar para a área de transferência"
@@ -1322,7 +1390,7 @@ def make_pairs_capes(*, long_segments: bool) -> list[tuple[str, str]]:
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/capes",
-        source_name="news_capes",
+        source_name=source_name,
         long_segments=long_segments,
         long_segment_inds=(slice(0, 3), slice(3, None), 64),
         short_segment_inds=[
@@ -1343,7 +1411,7 @@ def make_pairs_capes(*, long_segments: bool) -> list[tuple[str, str]]:
         fn_seg_preproc=fn_seg_preproc,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
-        it_to_print=0.20,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
-    return pairs
+    return pairs, source_name
