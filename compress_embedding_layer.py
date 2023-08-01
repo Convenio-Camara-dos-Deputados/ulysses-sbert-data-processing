@@ -1,7 +1,6 @@
 import collections
 import argparse
 import hashlib
-import shutil
 import glob
 import json
 import copy
@@ -31,7 +30,7 @@ def compute_token_id_dist(
     model_uri: str,
     cache_dir: str,
     ignore_cache: bool,
-) -> dict[str, int]:
+) -> collections.Counter[int]:
     cache_dir = os.path.abspath(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
@@ -70,7 +69,7 @@ def compress(
     output_dir: str,
     cache_dir: str,
     word_embedding_submodule_name: str,
-    ignore_cache: str,
+    ignore_cache: bool,
 ) -> None:
     output_dir = os.path.abspath(output_dir)
     cache_dir = os.path.abspath(cache_dir)
