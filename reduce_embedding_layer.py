@@ -62,7 +62,7 @@ def compute_token_id_dist(
     return token_id_dist
 
 
-def compress(
+def reduce(
     model_uri: str,
     corpora_uris: list[str],
     new_dict_size: int,
@@ -70,17 +70,26 @@ def compress(
     cache_dir: str,
     word_embedding_submodule_name: str,
     ignore_cache: bool,
+    dry_run: bool,
 ) -> None:
-    output_dir = os.path.abspath(output_dir)
     cache_dir = os.path.abspath(cache_dir)
+    output_dir = os.path.abspath(output_dir)
 
-    os.makedirs(output_dir, exist_ok=True)
     os.makedirs(cache_dir, exist_ok=True)
+
+    if not dry_run:
+        os.makedirs(output_dir, exist_ok=True)
 
     model_uri = os.path.expanduser(model_uri)
     model_uri = os.path.abspath(model_uri)
     model = sentence_transformers.SentenceTransformer(model_uri, device="cpu")
     model.eval()
+
+    if new_dict_size >= model.tokenizer.vocab_size:
+        raise ValueError(
+            "New dictionary size is not smaller than current dictionary size "
+            f"({new_dict_size=} > {model.tokenizer.vocab_size=})."
+        )
 
     token_id_dist = compute_token_id_dist(
         corpora_uris=corpora_uris,
@@ -159,6 +168,9 @@ def compress(
         new_bert.auto_model.resize_token_embeddings(new_emb.num_embeddings)
         new_bert.auto_model.embeddings.word_embeddings = new_emb
 
+        if dry_run:
+            return
+
         new_model.save(path=final_output_dir, model_name=model_name)
 
         sentence_transformers.SentenceTransformer(final_output_dir, device="cpu")
@@ -166,17 +178,50 @@ def compress(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("model_uri", help="SBERT model uri")
     parser.add_argument(
-        "corpora_uris", help="One or more corpora uris.", nargs="+", action="extend", type=str
+        "corpora_uris",
+        help=(
+            "One or more corpora directories. This script searches '.txt' files recursively "
+            "in the given directories."
+        ),
+        nargs="+",
+        action="extend",
+        type=str,
     )
-    parser.add_argument("--new-dict-size", "-n", default=30000, type=int)
-    parser.add_argument("--output-dir", "-d", default="./reduced_models")
-    parser.add_argument("--cache-dir", default="./cache")
-    parser.add_argument("--ignore-cache", action="store_true")
-    parser.add_argument(
-        "--word-embedding-submodule-name", "-s", default="auto_model.embeddings.word_embeddings"
+
+    parser_general = parser.add_argument_group("general arguments")
+    parser_general.add_argument(
+        "--new-dict-size", "-n", default=30000, type=int, help="New dictionary size"
     )
+    parser_general.add_argument(
+        "--word-embedding-submodule-name",
+        "-s",
+        default="auto_model.embeddings.word_embeddings",
+        help=(
+            "Name of the Torch word embedding submodule, where the (sub)word embeddings will "
+            "be retrieved from."
+        ),
+    )
+
+    parser_output = parser.add_argument_group("output arguments")
+    parser_output.add_argument(
+        "--output-dir", "-d", default="./reduced_models", help="Specify the output directory."
+    )
+    parser_output.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="If set, run this script but do not save the output model.",
+    )
+
+    parser_cache = parser.add_argument_group("cache arguments")
+    parser_cache.add_argument("--cache-dir", default="./cache", help="Specify cache directory.")
+    parser_cache.add_argument(
+        "--ignore-cache",
+        action="store_true",
+        help="If set, ignore cache files and recompute token distribution.",
+    )
+
     args = parser.parse_args()
-    compress(**vars(args))
+    reduce(**vars(args))
