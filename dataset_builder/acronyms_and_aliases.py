@@ -1171,6 +1171,9 @@ def make_pairs(long_segments: bool = False) -> tuple[str, str]:
         ]
     )
 
+    df = pd.read_csv(os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "glossario_congresso_senado.csv"), index_col=False)
+    pairs.extend(df.values.tolist())
+
     assert len(pairs)
 
     return pairs
