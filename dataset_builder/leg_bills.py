@@ -59,6 +59,8 @@ def split_justificativa(
 
 
 def make_pairs_fed_bills(
+    *,
+    long_segments: bool,
     debug: bool = False,
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     # # Older version:
@@ -70,7 +72,7 @@ def make_pairs_fed_bills(
 
     # New version:
     documents = pd.read_csv(
-        os.path.abspath("./raw_data/USP_dataset_proposicoes_20230428.csv"),
+        os.path.join(utils.Config.COMPLEMENTARY_DATADIR, "USP_dataset_proposicoes_20230428.csv"),
         usecols=["txtNome", "txtEmenta", "txtExplicacaoEmenta", "txtInteiroTeor"],
         index_col=0,
     )
@@ -91,7 +93,10 @@ def make_pairs_fed_bills(
     pairs_leg: list[tuple[str, str]] = []
     pairs_just: list[tuple[str, str]] = []
     pbar = tqdm.tqdm(documents.iterrows(), desc="(federal leg bills)", total=len(documents))
-    iters_to_print = max(int(len(pbar) * 0.05), 1)
+
+    iters_to_print = 0
+    if utils.Config.IT_TO_PRINT:
+        iters_to_print = max(int(len(pbar) * utils.Config.IT_TO_PRINT), 1)
 
     segmenter = segmentador.BERTSegmenter(device="cuda:0")
 
@@ -109,21 +114,45 @@ def make_pairs_fed_bills(
             ementa_explanation = ementa_explanation.strip()
             pairs_leg.append((ementa_content_ext, ementa_explanation))
 
-        first_article = utils.fetch_first_item(doc_content, segmenter=segmenter, prefix="Art")
-        first_article = utils.remove_spurious_whitespaces(first_article)
+        if long_segments:
+            segs, justs = segmenter(
+                doc_content, remove_noise_subsegments=True, return_justificativa=True
+            )
+            k = utils.fetch_first_item_index(segs, prefix="Art")
 
-        if first_article and len(first_article) >= min_length:
-            pairs_leg.append((ementa_content_ext, first_article))
+            if k:
+                seg_a = "\n".join(segs[:k])
+                seg_b = "\n".join(segs[k:])
 
-        just_a, just_b = split_justificativa(doc_content, segmenter=segmenter)
+                if min(len(seg_a), len(seg_b)) >= min_length:
+                    pairs_leg.append((seg_a, seg_b))
 
-        if just_a and min(len(ementa_content), len(just_a)) >= min_length:
-            pairs_just.append((ementa_content, just_a))
+            if justs:
+                just_segs = utils.natural_sentence_tokenize(justs[0])
+                if just_segs and len(just_segs) >= 6:
+                    k = len(just_segs) // 2 - 2
+                    seg_a = "\n".join(just_segs[:k])
+                    seg_b = "\n".join(just_segs[k:])
 
-        if just_b and just_a and min(len(just_b), len(just_a)) >= min_length:
-            pairs_just.append((just_b, just_a))
+                    if min(len(seg_a), len(seg_b)) >= min_length:
+                        pairs_just.append((seg_a, seg_b))
 
-        if i % iters_to_print == 0:
+        else:
+            first_article = utils.fetch_first_item(doc_content, segmenter=segmenter, prefix="Art")
+            first_article = utils.remove_spurious_whitespaces(first_article)
+
+            if first_article and len(first_article) >= min_length:
+                pairs_leg.append((ementa_content_ext, first_article))
+
+            just_a, just_b = split_justificativa(doc_content, segmenter=segmenter)
+
+            if just_a and min(len(ementa_content), len(just_a)) >= min_length:
+                pairs_just.append((ementa_content, just_a))
+
+            if just_b and just_a and min(len(just_b), len(just_a)) >= min_length:
+                pairs_just.append((just_b, just_a))
+
+        if iters_to_print and i % iters_to_print == 0:
             if pairs_leg:
                 utils.print_example(*pairs_leg[-1])
             if len(pairs_just) >= 2:
@@ -258,7 +287,8 @@ def fn_doc_name_mg(
     segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
 ) -> tuple[str, str] | None:
     reg_skip = re.compile(
-        "Palácio da Inconfidência|Belo Horizonte, aos|Considerando|DECRETA", re.IGNORECASE
+        "Palácio da Inconfidência|Belo Horizonte, aos|Considerando|DECRETA",
+        re.IGNORECASE,
     )
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -397,7 +427,9 @@ def fn_doc_name_sp(
     if i >= 1:
         title = segs[i - 1]
         ementa = re.sub(
-            "\s*(?:[A-ZÇÀÁÉÍÓÚÂÊÔÃẼÕÜ]\s*)+, GOVERNADOR DO ESTADO DE SÃO PAULO.*$", "", segs[i]
+            "\s*(?:[A-ZÇÀÁÉÍÓÚÂÊÔÃẼÕÜ]\s*)+, GOVERNADOR DO ESTADO DE SÃO PAULO.*$",
+            "",
+            segs[i],
         )
         bad_suffix = ", dos Deputados"
         if title.endswith(bad_suffix):
@@ -465,9 +497,13 @@ def fn_preprocessing_ba(text: str) -> str:
 
 
 def make_pairs_state_bills(
+    *,
+    long_segments: bool,
     debug: bool = False,
 ) -> dict[str, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:
-    state_dirs = glob.glob(os.path.abspath("./raw_data/legislacoes_estaduais/legislacao_*"))
+    state_dirs = glob.glob(
+        os.path.join(utils.Config.TESEMO_PATH, "legislativo/l2_legislacao_estadual/legislacao_*")
+    )
     state_dirs = [
         item for item in state_dirs if not re.search("_(?:pi|rr)$", os.path.basename(item))
     ]
@@ -514,7 +550,8 @@ def make_pairs_state_bills(
     }
 
     reg_titles = re.compile(
-        r"T[ií]tulo (?:de )?Cidadã|T[ií]tulo de|t[ií]tulo .{,10}de Cidadã", re.IGNORECASE
+        r"T[ií]tulo (?:de )?Cidadã|T[ií]tulo de|t[ií]tulo .{,10}de Cidadã",
+        re.IGNORECASE,
     )
     reg_public_utility = re.compile("utilidade p[uú]blica", re.IGNORECASE)
 
@@ -525,7 +562,8 @@ def make_pairs_state_bills(
             re.IGNORECASE,
         ),
         "pe": re.compile(
-            r"PRODEPE|Abre a?o Orçamento Fiscal|Concede est[ií]mulo|incentivo fiscal", re.IGNORECASE
+            r"PRODEPE|Abre a?o Orçamento Fiscal|Concede est[ií]mulo|incentivo fiscal",
+            re.IGNORECASE,
         ),
         "rj": re.compile(r"finalidade que menciona", re.IGNORECASE),
         "sp": re.compile(r"^(?:Denomina|Dá a denominação)", re.IGNORECASE),
@@ -569,7 +607,7 @@ def make_pairs_state_bills(
             uris = uris[:10]
 
         pbar = tqdm.tqdm(uris, desc=f"(state leg bills, {state_acronym})", total=len(uris))
-        iters_to_print = max(int(len(pbar) * 0.05), 1)
+        iters_to_print = max(int(len(pbar) * utils.Config.IT_TO_PRINT), 1)
         cur_iters_to_print = iters_to_print
         pairs_leg, pairs_just = pairs[state_acronym]
 
@@ -582,7 +620,10 @@ def make_pairs_state_bills(
             if state_acronym in acronym_to_preprocessing:
                 doc_content = acronym_to_preprocessing[state_acronym](doc_content)
 
-            segs = segmenter(doc_content[:4000], remove_noise_subsegments=True)
+            segs = segmenter(
+                doc_content[: 10000 if long_segments else 4000],
+                remove_noise_subsegments=True,
+            )
             first_article, j = utils.fetch_first_item_with_index(
                 segs, segmenter=segmenter, prefix="Art"
             )
@@ -619,16 +660,35 @@ def make_pairs_state_bills(
             doc_name = f"{acronym_to_name[state_acronym]}/{state_acronym.upper()}, {doc_name}"
             ementa_content_ext = f"({doc_name}) {ementa_content}"
 
-            if min(len(ementa_content), len(first_article)) >= min_length:
-                pairs_leg.append((ementa_content_ext, first_article))
+            if long_segments:
+                seg_a = "\n".join(segs[:j])
+                seg_b = "\n".join(segs[j:])
+                if min(len(seg_a), len(seg_b)) >= min_length:
+                    pairs_leg.append((seg_a, seg_b))
 
-            just_a, just_b = split_justificativa(doc_content, segmenter=segmenter)
+                _, justs = segmenter.preprocess_legal_text(doc_content, return_justificativa=True)
 
-            if just_a and min(len(ementa_content), len(just_a)) >= min_length:
-                pairs_just.append((ementa_content, just_a))
+                if justs:
+                    just_segs = utils.natural_sentence_tokenize(justs[0])
+                    if just_segs and len(just_segs) >= 6:
+                        k = len(just_segs) // 2 - 2
+                        seg_a = "\n".join(just_segs[:k])
+                        seg_b = "\n".join(just_segs[k:])
 
-            if just_b and just_a and min(len(just_b), len(just_a)) >= min_length:
-                pairs_just.append((just_b, just_a))
+                        if min(len(seg_a), len(seg_b)) >= min_length:
+                            pairs_just.append((seg_a, seg_b))
+
+            else:
+                if min(len(ementa_content), len(first_article)) >= min_length:
+                    pairs_leg.append((ementa_content_ext, first_article))
+
+                just_a, just_b = split_justificativa(doc_content, segmenter=segmenter)
+
+                if just_a and min(len(ementa_content), len(just_a)) >= min_length:
+                    pairs_just.append((ementa_content, just_a))
+
+                if just_b and just_a and min(len(just_b), len(just_a)) >= min_length:
+                    pairs_just.append((just_b, just_a))
 
             if cur_iters_to_print <= 0:
                 cur_iters_to_print = iters_to_print
