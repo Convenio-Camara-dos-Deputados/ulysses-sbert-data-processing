@@ -1,6 +1,7 @@
 import typing as t
 import argparse
 import collections
+import functools
 import os
 
 import tqdm
@@ -40,7 +41,18 @@ class UnionFindRank:
         self.rank[pv] += 1
 
 
-def sample_outside_source(subset: pd.Series, complementary_subset: pd.Series, source: str, random_state: t.Optional[int] = None) -> pd.DataFrame:
+def save_dataframe(negative_pairs: list[pd.DataFrame], output_uri: str, sep: str) -> None:
+    df_out = pd.concat(negative_pairs, ignore_index=True)
+    assert df_out.shape[1] == 3
+    df_out.to_csv(output_uri, sep=sep)
+
+
+def sample_outside_source(
+    subset: pd.Series,
+    complementary_subset: pd.Series,
+    source: str,
+    random_state: t.Optional[int] = None,
+) -> pd.DataFrame:
     n = len(subset)
     m = len(complementary_subset)
 
@@ -50,7 +62,21 @@ def sample_outside_source(subset: pd.Series, complementary_subset: pd.Series, so
     return pd.DataFrame({"sentence_a": a.values, "sentence_b": b.values, "source": n * [source]})
 
 
-def sample_within_source(subset: pd.DataFrame, source: str, random_state: t.Optional[int] = None) -> pd.DataFrame:
+def sample_within_source(
+    subset: pd.DataFrame,
+    source: str,
+    random_state: t.Optional[int],
+    transitivity_check: bool,
+) -> pd.DataFrame:
+    if not transitivity_check:
+        df = sample_outside_source(
+            subset=subset,
+            complementary_subset=subset,
+            source=source,
+            random_state=random_state,
+        )
+        return df
+
     txt_to_idx = dict()
     subset_lc = subset.applymap(str.lower)
 
@@ -66,8 +92,12 @@ def sample_within_source(subset: pd.DataFrame, source: str, random_state: t.Opti
     for _, (a, b, *_) in subset_lc.iterrows():
         uf.union(txt_to_idx[a], txt_to_idx[b])
 
-    cluster_ids_a = np.array([uf.find(txt_to_idx[a]) for a in subset_lc["sentence_a"].values], dtype=int)
-    cluster_ids_b = np.array([uf.find(txt_to_idx[b]) for b in subset_lc["sentence_b"].values], dtype=int)
+    cluster_ids_a = np.array(
+        [uf.find(txt_to_idx[a]) for a in subset_lc["sentence_a"].values], dtype=int
+    )
+    cluster_ids_b = np.array(
+        [uf.find(txt_to_idx[b]) for b in subset_lc["sentence_b"].values], dtype=int
+    )
     cur = np.unique(np.hstack((cluster_ids_a, cluster_ids_b))).size / n
 
     seeder = cur_random_state = None
@@ -82,60 +112,85 @@ def sample_within_source(subset: pd.DataFrame, source: str, random_state: t.Opti
         connected_component = subset.loc[cluster_ids_a == cluster_id, "sentence_a"]
         disconnected_components = subset.loc[cluster_ids_b != cluster_id, "sentence_b"]
         if seeder is not None:
-            cur_random_state = seeder.randint(0, 2**32-1)
-        pbar.set_description(f"({source}, {n=}, CUR={cur:.6f}, cur_random_state={cur_random_state})")
-        cur_df_negs = sample_outside_source(connected_component, disconnected_components, source=source, random_state=cur_random_state)
+            cur_random_state = seeder.randint(0, 2**32 - 1)
+        pbar.set_description(
+            f"({source}, {n=}, CUR={cur:.6f}, cur_random_state={cur_random_state})"
+        )
+        cur_df_negs = sample_outside_source(
+            connected_component,
+            disconnected_components,
+            source=source,
+            random_state=cur_random_state,
+        )
         all_dfs.append(cur_df_negs)
 
-    df = pd.concat(all_dfs)
-    df.reset_index(inplace=True, drop=True)
+    df = pd.concat(all_dfs, ignore_index=True)
     return df
 
 
-def main(output_name: str, min_within_source_samples: int = 500, debug: bool = False) -> None:
-    if not output_name.endswith(".tsv"):
-        output_name += ".tsv"
+def sample_negatives(
+    input_uri: str,
+    output_uri: str,
+    min_within_source_samples: int = 500,
+    sep: str = "\t",
+    debug: bool = False,
+) -> None:
+    input_uri = os.path.abspath(input_uri)
+    output_uri = os.path.abspath(output_uri)
 
-    base_dir = os.path.abspath("./processed_data/ulysses_sbert_1mil_pairs")
-    input_uri = os.path.join(base_dir, "positive_pairs.tsv")
-    output_uri = os.path.join(base_dir, output_name)
-
-    df = pd.read_csv(input_uri, index_col=0, sep="\t", engine="c", low_memory=False)
+    df = pd.read_csv(input_uri, index_col=0, sep=sep, low_memory=False)
 
     if debug:
         df = df.iloc[::100, :]
 
     sources = np.unique(df["source"].values)
     negative_pairs: list[pd.DataFrame] = []
+    fn_save_df = functools.partial(save_dataframe, output_uri=output_uri, sep=sep)
 
     for source in tqdm.tqdm(sources):
         cur_inds = df["source"] == source
         subset = df.loc[cur_inds, ["sentence_a", "sentence_b"]]
         cur_subset_size = np.sum(cur_inds)
         cur_random_state = sum(map(ord, source))
+
         if cur_subset_size >= min_within_source_samples:
-            df_negative = sample_within_source(subset, source, random_state=cur_random_state)
+            df_negative = sample_within_source(
+                subset=subset,
+                source=source,
+                random_state=cur_random_state,
+                transitivity_check=transitivity_check,
+            )
+
         else:
-            df_negative = sample_outside_source(subset["sentence_a"], df.loc[~cur_inds, "sentence_b"], source=source, random_state=cur_random_state)
+            df_negative = sample_outside_source(
+                subset=subset["sentence_a"],
+                complementary_subset=df.loc[~cur_inds, "sentence_b"],
+                source=source,
+                random_state=cur_random_state,
+            )
 
         negative_pairs.append(df_negative)
 
-        if cur_subset_size > 30000:
-            save_dataframe(negative_pairs, output_uri=output_uri)
+        if transitivity_check and cur_subset_size > 30000:
+            fn_save_df(negative_pairs)
 
-    save_dataframe(negative_pairs, output_uri=output_uri)
-
-
-def save_dataframe(negative_pairs: list[pd.DataFrame], output_uri: str):
-    df_out = pd.concat(negative_pairs)
-    df_out.reset_index(inplace=True, drop=True)
-    assert df_out.shape[1] == 3
-    df_out.to_csv(output_uri, sep="\t")
+    fn_save_df(negative_pairs)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Sample random negatives.")
-    parser.add_argument("-o", "--output-name", type=str, default="negative_pairs.tsv")
-    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("input_uri", type=str)
+    parser.add_argument("output_uri", type=str)
+    parser.add_argument("--sep", default="\t", type=str)
+    parser.add_argument("--transitivity-check", action="store_true")
+    parser.add_argument("--debug", action="store_true")
+
     args = parser.parse_args()
-    main(output_name=args.output_name, debug=args.debug)
+
+    sample_negatives(
+        input_uri=args.input_uri,
+        output_uri=args.output_uri,
+        transitivity_check=args.transitivity_check,
+        sep=args.sep,
+        debug=args.debug,
+    )
