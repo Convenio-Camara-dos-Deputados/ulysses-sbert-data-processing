@@ -10,6 +10,22 @@ Trained models are available through [Ulysses Fetcher](https://github.com/ulysse
 ## Intended pipeline
 Scripts in this repository are intended to be run in the following order:
 
+```mermaid
+flowchart TD
+
+tesemo(["Ulysses Tesemõ"])
+dataset(["Ready-to-train paired dataset"])
+
+script1["build_datasets_from_raw_data.py"]
+script2["reduce_embedding_layer.py (optional)"]
+script3["tokenize_long_sentences.py (optional)"]
+script4["sample_negatives.py"]
+script5["merge_pos_neg.py"]
+
+tesemo -.-> script1 & script2
+script1 & script2 --> script3 --> script4 --> script5 -.-> dataset
+```
+
 1. [`build_datasets_from_raw_data.py`](#build_datasets_from_raw_datapy);
 2. [`reduce_embedding_layer.py`](#reduce_embedding_layerpy) (optional; only if specialization of multilingual models is wanted);
 3. [`tokenize_long_sentences.py`](#tokenize_long_sentencespy) (optional; only for long contexts);
