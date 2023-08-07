@@ -5,6 +5,7 @@ import functools
 import os
 
 import tqdm
+import colorama
 import pandas as pd
 import numpy as np
 
@@ -70,8 +71,8 @@ def sample_within_source(
 ) -> pd.DataFrame:
     if not transitivity_check:
         df = sample_outside_source(
-            subset=subset,
-            complementary_subset=subset,
+            subset=subset["sentence_a"],
+            complementary_subset=subset["sentence_b"],
             source=source,
             random_state=random_state,
         )
@@ -131,12 +132,18 @@ def sample_within_source(
 def sample_negatives(
     input_uri: str,
     output_uri: str,
+    transitivity_check: bool,
+    sep: str,
+    debug: bool,
     min_within_source_samples: int = 500,
-    sep: str = "\t",
-    debug: bool = False,
 ) -> None:
     input_uri = os.path.abspath(input_uri)
     output_uri = os.path.abspath(output_uri)
+
+    print(end=colorama.Fore.YELLOW)
+    if transitivity_check: print("Transitivity check enabled.")
+    else: print("Transitivity check disabled. Run with --transitivity-check to enabled it.")
+    print(end=colorama.Style.RESET_ALL)
 
     df = pd.read_csv(input_uri, index_col=0, sep=sep, low_memory=False)
 
