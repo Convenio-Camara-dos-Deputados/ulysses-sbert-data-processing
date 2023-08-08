@@ -13,13 +13,16 @@ def run(
     input_uri: str,
     output_uri: str,
     sbert_uri: str,
-    context_length: int,
+    context_length: int | None,
     sep: str,
     dry_run: bool,
     it_to_print: int,
 ) -> None:
     tokenizer = sentence_transformers.SentenceTransformer(sbert_uri, device="cpu").tokenizer
     df = pd.read_csv(input_uri, sep=sep, index_col=0)
+
+    if context_length is None:
+        context_length = tokenizer.model_max_length
 
     pairs: list[tuple[str, str]] = []
 
@@ -36,8 +39,8 @@ def run(
         ids_a = tokenizer.encode(sent_a, truncation=False)
         ids_b = tokenizer.encode(sent_b, truncation=False)
 
-        truncated += len(ids_a) > context_length
-        truncated += len(ids_b) > context_length
+        truncated += int(len(ids_a) > context_length)
+        truncated += int(len(ids_b) > context_length)
         pbar.set_description(f"Truncated: {truncated} ({100.0 * truncated / (1 + i):.1f}%)")
 
         text_a = fn_decode(ids_a[:context_length])
@@ -69,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("input_uri", type=str)
     parser.add_argument("output_uri", type=str)
     parser.add_argument("sbert_uri", type=str)
-    parser.add_argument("-l", "--context-length", type=int, default=1024)
+    parser.add_argument("-l", "--context-length", type=int, default=None)
     parser.add_argument("-s", "--sep", type=str, default="\t")
     parser.add_argument("--it-to-print", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
