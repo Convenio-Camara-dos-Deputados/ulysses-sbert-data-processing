@@ -10,6 +10,23 @@ Trained models are available through [Ulysses Fetcher](https://github.com/ulysse
 ## Intended pipeline
 Scripts in this repository are intended to be run in the following order:
 
+Build dataset of pairs of **short** segments:
+```mermaid
+flowchart TD
+
+tesemo(["Ulysses Tesemõ"])
+dataset(["Ready-to-train paired dataset"])
+
+script5["reduce_embedding_layer.py (optional)"]
+script1["build_datasets_from_raw_data.py"]
+script2["sample_negatives.py (with --transitivity-check)"]
+script3["merge_pos_neg.py"]
+
+tesemo -.-> script1 & script5
+script1 & script5 --> script2 --> script3 -.-> dataset
+```
+
+Building datasets of pairs of **long** segments:
 ```mermaid
 flowchart TD
 
@@ -18,19 +35,22 @@ dataset(["Ready-to-train paired dataset"])
 
 script1["build_datasets_from_raw_data.py"]
 script2["reduce_embedding_layer.py (optional)"]
-script3["tokenize_long_sentences.py (optional)"]
-script4["sample_negatives.py"]
-script5["merge_pos_neg.py"]
+script3["resize_position_embeddings.py (optional)"]
+script4["tokenize_long_sentences.py (optional)"]
+script5["sample_negatives.py"]
+script6["merge_pos_neg.py"]
 
 tesemo -.-> script1 & script2
-script1 & script2 --> script3 --> script4 --> script5 -.-> dataset
+script2 --> script3 --> script4
+script1 --> script4 --> script5 --> script6 -.-> dataset
 ```
 
 1. [`build_datasets_from_raw_data.py`](#build_datasets_from_raw_datapy);
 2. [`reduce_embedding_layer.py`](#reduce_embedding_layerpy) (optional; only if specialization of multilingual models is wanted);
-3. [`tokenize_long_sentences.py`](#tokenize_long_sentencespy) (optional; only for long contexts);
-4. [`sample_negatives.py`](#sample_negativespy); and
-5. [`merge_pos_neg.py`](#merge_pos_negpy).
+3. [`resize_position_embeddings.py`](#resize_position_embeddings) (optional; only if contexts larger than the base model context window are wanted);
+4. [`tokenize_long_sentences.py`](#tokenize_long_sentencespy) (optional; only for long contexts);
+5. [`sample_negatives.py`](#sample_negativespy); and
+6. [`merge_pos_neg.py`](#merge_pos_negpy).
 
 You can run any script listed above as `python script.py --help` to get documentation of available parameters.
 
@@ -91,6 +111,25 @@ python reduce_embedding_layers.py \
 ```
 
 *Output:* SBERT with reduced embedding layer.
+
+---
+
+### `resize_position_embeddings.py`
+*Gist:* Expand the number of positional tokens in an SBERT model.
+
+*Note:* The newly inserted positions must be trained in order to be useful. Recommended only for training with (very) long sentences. 
+
+*Command format:*
+```bash
+python resize_position_embeddings.py sbert_input_uri sbert_output_uri new_num_tokens
+```
+
+*Example:*
+```bash
+python resize_position_embeddings.py path/to/my/sbert my/output/path 1024
+```
+
+*Output:* SBERT with expanded context window.
 
 ---
 
