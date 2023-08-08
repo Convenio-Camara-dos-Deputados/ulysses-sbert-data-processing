@@ -47,7 +47,7 @@ script1 --> script4 --> script5 --> script6 -.-> dataset
 
 1. [`build_datasets_from_raw_data.py`](#build_datasets_from_raw_datapy);
 2. [`reduce_embedding_layer.py`](#reduce_embedding_layerpy) (optional; only if specialization of multilingual models is wanted);
-3. [`resize_position_embeddings.py`](#resize_position_embeddings) (optional; only if contexts larger than the base model context window are wanted);
+3. [`resize_position_embeddings.py`](#resize_position_embeddingspy) (optional; only if contexts larger than the base model context window are wanted);
 4. [`tokenize_long_sentences.py`](#tokenize_long_sentencespy) (optional; only for long contexts);
 5. [`sample_negatives.py`](#sample_negativespy); and
 6. [`merge_pos_neg.py`](#merge_pos_negpy).
