@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import sentence_transformers
 import torch
@@ -10,6 +11,7 @@ def resize(
     new_num_tokens: int,
     bert_submodule_name: str,
     disable_tests: bool,
+    dry_run: bool,
 ) -> None:
     sbert = sentence_transformers.SentenceTransformer(sbert_input_uri, device="cpu")
     bert = sbert.get_submodule(bert_submodule_name)
@@ -31,11 +33,16 @@ def resize(
     sbert.max_seq_length = new_num_tokens
     sbert.tokenizer.model_max_length = new_num_tokens
 
-    out_path, out_name = sbert_output_uri.rstrip("/")
-    sbert.save(path=out_path, name=out_name)
+    sbert_output_uri = sbert_output_uri.rstrip("/")
+    out_path, out_name = os.path.split(sbert_output_uri)
+
+    if not dry_run:
+        sbert.save(path=sbert_output_uri, model_name=out_name)
+        print(f"Saved model at '{sbert_output_uri}'.")
 
     if not disable_tests:
-        sbert = sentence_transformers.SentenceTransformer(sbert_output_uri, device="cpu")
+        if not dry_run:
+            sbert = sentence_transformers.SentenceTransformer(sbert_output_uri, device="cpu")
 
         test_embs = sbert.encode(
             2 * new_num_tokens * "Test large sentence", output_value="token_embeddings"
@@ -53,5 +60,6 @@ if __name__ == "__main__":
     parser.add_argument("new_num_tokens", type=int)
     parser.add_argument("--bert-submodule-name", default="0.auto_model", type=str)
     parser.add_argument("--disable-tests", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     resize(**vars(args))
