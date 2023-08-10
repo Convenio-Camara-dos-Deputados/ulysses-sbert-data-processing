@@ -59,11 +59,12 @@ You can run any script listed above as `python script.py --help` to get document
 ### `build_datasets_from_raw_data.py`
 *Gist:* Generate pairs of semantically connected segments from [Tesemõ corpus](https://github.com/ulysses-camara/ulysses-tesemo).
 
-*Note:* The following corpora must be available locally defore running this script:
+*Note:* The following corpora must be available locally before running this script:
 - Two Tesemõ's subsets (path searched by default is `--tesemo-path=./tesemo_v2.1`):
   - Tesemõ's subset "legislativo" (searched at `./tesemo_v2.1/legislativo`);
   - Tesemõ's subset "outros" (searched at `./tesemo_v2.1/outros`); and
 - A complementary dataset available [here](https://cloud.andrelab.icmc.usp.br/s/McLJ6KyWAdKPiEd) (path searched by default is `--complementary-data-path=./ulysses_sbert_complementary_pair_data`). 
+Don't forget to unzip the data after downloading it.
 
 *Note:* ready-to-use paired datasets, used to train Ulysses Sentence Models currently available in [Ulysses Fetcher](https://github.com/ulysses-camara/ulysses-fetcher), can be found [here](https://cloud.andrelab.icmc.usp.br/s/5szom8Tawj24ZxQ).
 
