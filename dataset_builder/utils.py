@@ -12,7 +12,7 @@ import colorama
 
 class Config:
     TESEMO_PATH = os.path.abspath("./tesemo_v2.1")
-    COMPLEMENTARY_DATADIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+    COMPLEMENTARY_DATADIR = os.path.abspath("./ulysses_sbert_complementary_data")
     IT_TO_PRINT = 0.20
 
 
