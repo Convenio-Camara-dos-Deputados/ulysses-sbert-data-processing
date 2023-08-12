@@ -16,6 +16,7 @@ def run(
     context_length: int | None,
     sep: str,
     dry_run: bool,
+    unfold_sentence_b: bool,
     it_to_print: int,
 ) -> None:
     tokenizer = sentence_transformers.SentenceTransformer(sbert_uri, device="cpu").tokenizer
@@ -23,6 +24,11 @@ def run(
 
     if context_length is None:
         context_length = tokenizer.model_max_length
+
+    print(f"Chosen context length: {context_length}.")
+
+    if unfold_sentence_b: print("Pairing all sentence B context.")
+    else: print("Discarding sentence B further context.")
 
     pairs: list[tuple[str, str]] = []
 
@@ -47,16 +53,17 @@ def run(
         text_b = text_prev = fn_decode(ids_b[:context_length])
         pairs.append((text_a, text_b, source_name))
 
-        for i_start in np.arange(context_length, len(ids_b), context_length):
-            i_end = i_start + context_length
-            cur_ids_b = ids_b[i_start:i_end]
+        if unfold_sentence_b:
+            for i_start in np.arange(context_length, len(ids_b), context_length):
+                i_end = i_start + context_length
+                cur_ids_b = ids_b[i_start:i_end]
 
-            if len(cur_ids_b) <= 32:
-                continue
+                if len(cur_ids_b) <= 32:
+                    continue
 
-            cur_text_b = fn_decode(cur_ids_b)
-            pairs.append((text_prev, cur_text_b, source_name))
-            text_prev = cur_text_b
+                cur_text_b = fn_decode(cur_ids_b)
+                pairs.append((text_prev, cur_text_b, source_name))
+                text_prev = cur_text_b
 
         if pairs and it_to_print and i % it_to_print == 0:
             dataset_builder.utils.print_example(*pairs[-1][:2])
@@ -75,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--context-length", type=int, default=None)
     parser.add_argument("-s", "--sep", type=str, default="\t")
     parser.add_argument("--it-to-print", type=int, default=None)
+    parser.add_argument("--unfold-sentence-b", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     run(**vars(args))
