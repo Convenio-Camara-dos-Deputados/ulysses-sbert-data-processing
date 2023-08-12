@@ -1,4 +1,4 @@
-"git+https://github.com/ulysses-camara/ulysses-segmenter@v0.3.3"
+git+https://github.com/ulysses-camara/ulysses-segmenter@v0.3.3
 bs4==0.0.1
 colorama==0.4.6
 nltk==3.8.1
