@@ -32,6 +32,7 @@ def merge(
     df = pd.concat((df_pos, df_neg), ignore_index=True)
 
     df.to_csv(os.path.abspath(output_uri), sep=sep)
+    print(f"Wrote {len(df)} instances to '{output_uri}'.")
 
 
 if __name__ == "__main__":
