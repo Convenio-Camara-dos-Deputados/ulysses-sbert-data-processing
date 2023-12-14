@@ -58,6 +58,69 @@ def build_pairs(
 
     dfs: list[pd.DataFrame] = []
 
+    fns = (
+        dataset_builder.general.make_pairs_tjac,
+        dataset_builder.general.make_pairs_tjal,
+        dataset_builder.general.make_pairs_tjam,
+        dataset_builder.general.make_pairs_tjap,
+        dataset_builder.general.make_pairs_tjba,
+        dataset_builder.general.make_pairs_tjce,
+        dataset_builder.general.make_pairs_tjdf,
+        dataset_builder.general.make_pairs_tjes,
+        dataset_builder.general.make_pairs_tjgo,
+        dataset_builder.general.make_pairs_tjma,
+        dataset_builder.general.make_pairs_tjmg,
+        dataset_builder.general.make_pairs_tjms,
+        dataset_builder.general.make_pairs_tjmt,
+        dataset_builder.general.make_pairs_tjpa,
+        dataset_builder.general.make_pairs_tjpb,
+        dataset_builder.general.make_pairs_tjpe,
+        dataset_builder.general.make_pairs_tjpi,
+        dataset_builder.general.make_pairs_tjpr,
+        dataset_builder.general.make_pairs_tjrj,
+        dataset_builder.general.make_pairs_tjrn,
+        dataset_builder.general.make_pairs_tjro,
+        dataset_builder.general.make_pairs_tjrr,
+        dataset_builder.general.make_pairs_tjrs,
+        dataset_builder.general.make_pairs_tjsc,
+        dataset_builder.general.make_pairs_tjse,
+        dataset_builder.general.make_pairs_tjsp,
+        dataset_builder.general.make_pairs_tjto,
+        dataset_builder.general.make_pairs_state_ac,
+        dataset_builder.general.make_pairs_state_al,
+        dataset_builder.general.make_pairs_state_am,
+        dataset_builder.general.make_pairs_state_ap,
+        dataset_builder.general.make_pairs_state_ba,
+        dataset_builder.general.make_pairs_state_ce,
+        dataset_builder.general.make_pairs_state_df,
+        dataset_builder.general.make_pairs_state_es,
+        dataset_builder.general.make_pairs_state_go,
+        dataset_builder.general.make_pairs_state_ma,
+        dataset_builder.general.make_pairs_state_mg,
+        dataset_builder.general.make_pairs_state_ms,
+        dataset_builder.general.make_pairs_state_mt,
+        dataset_builder.general.make_pairs_state_pa,
+        dataset_builder.general.make_pairs_state_pb,
+        dataset_builder.general.make_pairs_state_pe,
+        dataset_builder.general.make_pairs_state_pi,
+        dataset_builder.general.make_pairs_state_pr,
+        dataset_builder.general.make_pairs_state_rj,
+        dataset_builder.general.make_pairs_state_rn,
+        dataset_builder.general.make_pairs_state_ro,
+        dataset_builder.general.make_pairs_state_rr,
+        dataset_builder.general.make_pairs_state_rs,
+        dataset_builder.general.make_pairs_state_sc,
+        dataset_builder.general.make_pairs_state_se,
+        dataset_builder.general.make_pairs_state_sp,
+        dataset_builder.general.make_pairs_state_to,
+    )
+
+    for fn in fns:
+        pairs, source_name = fn(long_segments=long_segments)
+        dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name=source_name))
+
+    save_cache(dfs, output_dir=cache_dir)
+
     pairs_a, pairs_b = dataset_builder.leg_bills.make_pairs_fed_bills(
         long_segments=long_segments, debug=debug
     )

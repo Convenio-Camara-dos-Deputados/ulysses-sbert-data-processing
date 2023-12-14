@@ -523,7 +523,7 @@ def make_pairs_radio_camara(*, long_segments: bool) -> tuple[list[tuple[str, str
 def make_pairs_trf4(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
     source_name = "news_trf4"
 
-    reg_document_full_skip = re.compile("Agenda da presidente do TRF4", re.IGNORECASE)
+    reg_document_full_skip = re.compile("Agenda d[oa] presidente do TRF4", re.IGNORECASE)
 
     pairs = _make_pairs_generic(
         "outros/o1_noticias_governamentais/trf4_tribunal_regional_federal_da_4_regiao",
@@ -995,7 +995,7 @@ def make_pairs_stf(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
         re.IGNORECASE,
     )
     reg_document_full_skip = re.compile(
-        r"Agenda do presidente"
+        r"Agenda d[ao] presidente"
         r"|Confira os destaques da TV Justiça"
         r"|Destaques da Rádio Justiça"
         r"|Confira a programação"
@@ -1323,7 +1323,7 @@ def make_pairs_onu(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
     source_name = "news_onu"
 
     reg_banned_patterns = re.compile(
-        r"Legenda:|Foto:|Acesse também o|\[embed\]|\[caption",
+        r"Legenda:|Fotos?:|Acesse também o|\[embed\]|\[caption",
         re.IGNORECASE,
     )
 
@@ -1409,6 +1409,2081 @@ def make_pairs_capes(*, long_segments: bool) -> tuple[list[tuple[str, str]], str
         reg_document_full_skip=None,
         document_full_skip_inds=None,
         fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjac(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ac"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(r"[0-9]{2}\.[0-9]{2}\.[0-9]{4} \| Notícias")
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 2, 32),
+            (0, 3, 48),
+            (4, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 5, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 5, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjal(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "al"
+    source_name = f"news_tj{state}"
+
+    reg_imagem = re.compile(r"(?:Foto|Imagem|Arte):.{,60}$", re.IGNORECASE)
+
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_imagem.sub("", x)
+        x = x.strip()
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjam(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "am"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjap(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ap"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjba(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ba"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "PUBLICADO EM:"
+        "|ATUALIZADO EM:"
+        "|Texto:"
+        "|COMPARTILHAR:"
+        "|IMPRIMIR$"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjce(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ce"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile("Ouvir:")
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjdf(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "df"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile("©|Todos os direitos reservados|Publique essa notícia no")
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjes(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "es"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "(?:SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA)-FEIRA,"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (0, 2, 48),
+            (3, 2, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjgo(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "go"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (1, 2, 32),
+            (3, 2, 48),
+            (3, 4, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 5, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 5, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjma(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ma"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "foto/divulgação:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjmg(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "mg"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h"
+        "|Número de visualizações"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjms(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ms"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjmt(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "mt"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjpa(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pa"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjpb(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pb"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhar: "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjpe(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pe"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjpi(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pi"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Publicado por:"
+        "|(?:segunda|terça|quarta|quinta|sexta)-feira, "
+        "|(?:domingo|s[aá]bado), [0-9]{1,2}"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjpr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pr"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 2, 32),
+            (3, 2, 48),
+            (3, 4, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 5, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 5, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjrj(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rj"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Notícia publicada por"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjrn(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rn"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Publicado em:"
+        "|PORTAL ANTIGO"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjro(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ro"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "(Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo),"
+        "|Tamanho da Fonte"
+        "|Tweet$"
+        "|Voltar ao topo"
+        "|Transmissão ao vivo -"
+        "|TRIBUNAL DE JUSTIÇA DO ESTADO DE RONDÔNIA"
+        "|COORDENADORIA DE COMUNICAÇÃO SOCIAL"
+        "|Porto Velho, [0-9]{1,2}"
+        "|Seção de Imprensa e Divulgação"
+        "|JUser: "
+        "|JavaScript is currently disabled"
+        "|Assessoria de Comunicação Instituciona(?:is|l)"
+        "|Clique aqui e assista a transmissão ao vivo\."
+    )
+
+    reg_document_full_skip = re.compile(
+        "NOTÍCIAS LOCAIS, NACIONAIS E INTERNACIONAIS"
+        "|NOTÍCIAS DO JUDICIÁRIO DE RONDÔNIA"
+        "|Sessão da 1ª Câmara Criminal do TJRO"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=[0],
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjrr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rr"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjrs(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rs"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhar:"
+        "|Texto:"
+        "|Créditos:"
+        "|[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} - "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjsc(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "sc"
+    source_name = f"news_tj{state}"
+
+    reg_banned_patterns = re.compile(
+        "Copiar o link desta notícia\."
+        "|Imagens:"
+        "|Conteúdo:"
+        "|Responsável:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjse(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "se"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjsp(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "sp"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_tjto(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "to"
+    source_name = f"news_tj{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ac(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ac"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "^Da Redação "
+        "|(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) [0-9]{1,2}, [0-9]{4} - [0-9]{1,2}h[0-9]{1,2}min"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=True,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_al(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "al"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}:[0-9]{1,2} \|"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_am(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "am"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Por .{60}$"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ap(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ap"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "(segunda|terça|quarta|quinta|sexta|sábado|domingo), [0-9]{1,2}"
+        "|Tweet"
+        "|Por: "
+        "|Fotos?: "
+    )
+
+    def fn_text_preproc(x: str) -> str:
+        x = x.split("NOTÍCIAS RELACIONADAS")[0]
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=fn_text_preproc,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ba(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ba"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2} (?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) [0-9]{4}\s*$"
+        "|Início Notícias"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ce(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ce"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Data: "
+        "|Categoria: "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_df(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "df"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [aà]s [0-9]{1,2}:[0-9]{1,2}"
+        "|.{,70}, da Agência Brasília"
+    )
+
+    def fn_text_preproc(x: str) -> str:
+        x = x.split("ÚLTIMAS NOTÍCIAS")[0]
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=fn_text_preproc,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_es(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "es"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [0-9]{1,2}[h:][0-9]{1,2}"
+        "|Tweet"
+        "|Linkedin"
+        "|Compartilhar"
+        "|Imprimir"
+        "|Fotos?:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_go(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "go"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Publicado:"
+        "|Última Atualização:"
+        "|Mais informações:"
+    )
+
+    reg_document_full_skip = re.compile(
+        "Esses são os destaques d[oa]"
+        "|Agenda d[ao] governadora?"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=[0],
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ma(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ma"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        " - "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_mg(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "mg"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "(?:SEG|TER|QUA|QUI|SEX|S[ÁA]B|DOM) [0-9]{1,2} "
+    )
+
+    def fn_text_preproc(x: str) -> str:
+        x = x.split("OUTRAS NOTÍCIAS")[0]
+        return x
+
+    def fn_seg_preproc(x: str) -> str:
+        x = x.replace("[RÁDIO]", "").strip()
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=fn_text_preproc,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=[0, 2],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ms(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ms"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        ".{,60}nrodrigues"
+        "|http"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_mt(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "mt"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Crédito - "
+        "|http"
+    )
+
+    def fn_seg_preproc(x: str) -> str:
+        x = x.removesuffix(" - mt.gov.br")
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_pa(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pa"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Por Redação - "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_pb(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pb"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "publicado:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_pe(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pe"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "PUBLICADO:"
+        "|Fotos?:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_pi(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pi"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        ""
+        "|Repórter(?:es)?:"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 3), slice(3, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_pr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "pr"
+    source_name = f"news_state_{state}"
+
+    reg_noise = re.compile(r" -.{,40}$")
+
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    def fn_seg_postproc(segs: list[str]) -> list[str]:
+        i = 0
+        while i < len(segs) - 1:
+            if segs[i].lower().strip() == segs[i + 1].lower().strip():
+                segs.pop(i)
+            else:
+                i += 1
+
+        if len(segs) >= 2 and segs[-1].lower().strip() == segs[-2].lower().strip():
+            segs.pop(-1)
+            segs.pop(-2)
+
+        return segs
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=[0, 2],
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=fn_seg_postproc,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_rj(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rj"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "Publicado [0-9]{1,2}/[0-9]{1,2}/[0-9]{4}"
+        "|null "
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_rn(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rn"
+    source_name = f"news_state_{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_ro(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "ro"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]+.{,60} \| Governo do Estado de Rondônia$",
+    )
+
+    def fn_text_preproc(x: str) -> str:
+        x = x.split("Leia mais")[0]
+        return x
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=fn_text_preproc,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_rr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rr"
+    source_name = f"news_state_{state}"
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_rs(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "rs"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        r"Inicial Imprensa"
+        r"|Publicação:"
+        r"|.{,60}\.jpg\b"
+    )
+
+    reg_document_full_skip = re.compile(
+        "Agenda d[ao] governadora?"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=reg_document_full_skip,
+        document_full_skip_inds=[0],
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_sc(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "sc"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        r"Por.{,60}[0-9] de [a-zç]+ de [0-9]{4}$"
+        "|Secretaria de Estado da Justiça e Cidadania – SJC"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_se(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "se"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "(?:Segunda|Terça|Quarta|Quinta|Sexta)-Feira,"
+        "|(?:Sábado|Domingo),"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 40),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=40,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_sp(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "sp"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "(:?seg|ter|qua|qui|sex|s[aá]b|dom), "
+        "|Compartilhe essa página"
+        "|[-–] Siga o Governo do Estado"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_state_to(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    state = "to"
+    source_name = f"news_state_{state}"
+
+    reg_banned_patterns = re.compile(
+        "publicado:"
+        "|por .{,50}$"
+    )
+
+    pairs = _make_pairs_generic(
+        f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=None,
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
