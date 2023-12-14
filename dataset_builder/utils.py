@@ -265,10 +265,10 @@ def gen_dataframe(
 
     df.dropna(inplace=True)
 
-    df = df.applymap(lambda x: x.strip())
-    df = df.applymap(lambda x: x.replace("\r", " "))
-    df = df.applymap(lambda x: reg_h_whitespace_spans.sub(" ", x))
-    df = df.applymap(lambda x: reg_empty_lines.sub("", x))
+    df = df.map(lambda x: x.strip())
+    df = df.map(lambda x: x.replace("\r", " "))
+    df = df.map(lambda x: reg_h_whitespace_spans.sub(" ", x))
+    df = df.map(lambda x: reg_empty_lines.sub("", x))
 
     df.drop_duplicates(inplace=True)
     df = df.loc[
@@ -276,9 +276,9 @@ def gen_dataframe(
         :,
     ]
 
-    lens = df.applymap(len).min(axis=1).values
+    lens = df.map(len).min(axis=1).values
     df.loc[lens > max_length, :] = (
-        df.loc[lens > max_length, :].applymap(lambda x: f"{x[:max_length-3]}...").values
+        df.loc[lens > max_length, :].map(lambda x: f"{x[:max_length-3]}...").values
     )
 
     df = df.loc[min_length <= lens, :]
