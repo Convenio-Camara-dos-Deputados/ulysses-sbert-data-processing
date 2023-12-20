@@ -8,9 +8,7 @@ from . import utils
 
 
 def make_pairs(long_segments: bool = False) -> list[tuple[str, str]]:
-    base_dir = os.path.join(
-        utils.Config.TESEMO_PATH, "legislativo", "l4_discursos_da_camara_dos_deputados"
-    )
+    base_dir = os.path.join(utils.Config.TESEMO_PATH, "legislativo", "l4_discursos_da_camara_dos_deputados")
     summary_uris = glob.glob(os.path.join(base_dir, "sumarios_discursos_subset_a", "*.txt"))
 
     assert len(summary_uris)

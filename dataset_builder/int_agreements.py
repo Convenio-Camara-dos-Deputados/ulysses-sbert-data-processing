@@ -40,11 +40,7 @@ def make_pairs(long_segments: bool = False) -> list[tuple[str, str]]:
             title = segs[0]
             first_article = utils.remove_spurious_whitespaces(utils.fetch_first_item(segs))
 
-            if (
-                first_article
-                and min(len(title), len(first_article)) >= 200
-                and max(len(title), len(first_article)) <= 800
-            ):
+            if first_article and min(len(title), len(first_article)) >= 200 and max(len(title), len(first_article)) <= 800:
                 pairs.append((title, first_article))
 
         if i % 100 == 0 and len(pairs):

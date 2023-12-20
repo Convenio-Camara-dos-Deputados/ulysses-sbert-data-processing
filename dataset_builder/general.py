@@ -3,8 +3,10 @@ import glob
 import os
 import re
 import collections
+import hashlib
 
 import pandas as pd
+import numpy as np
 import tqdm
 
 from . import utils
@@ -53,9 +55,7 @@ def _read_file_segments(
         segs = [item for item in segs if len(item)]
 
     if reg_banned_patterns:
-        fn_filter = (
-            reg_banned_patterns.search if full_search_banned_patterns else reg_banned_patterns.match
-        )
+        fn_filter = reg_banned_patterns.search if full_search_banned_patterns else reg_banned_patterns.match
         segs = [item for item in segs if not fn_filter(item)]
 
     if not apply_preproc_before_banned_patterns and fn_seg_preproc:
@@ -64,11 +64,7 @@ def _read_file_segments(
 
     if redundancy_check_inds:
         i, j = redundancy_check_inds
-        if (
-            len(segs) > max(i, j)
-            and len(segs[i]) == len(segs[j])
-            and segs[i].lower() == segs[j].lower()
-        ):
+        if len(segs) > max(i, j) and len(segs[i]) == len(segs[j]) and segs[i].lower() == segs[j].lower():
             segs.pop(i)
 
     if fn_seg_postproc:
@@ -102,6 +98,7 @@ def _make_pairs_generic(
     apply_preproc_before_banned_patterns: bool = False,
     long_segment_join_string: str = "\n",
     it_to_print: float | int | None = None,
+    save_externally_for_evaluation: int | None = None,
 ) -> list[tuple[str, str]]:
     if uri in _VISITED["uri"]:
         raise ValueError("'{uri = }' has already been visited.")
@@ -110,36 +107,29 @@ def _make_pairs_generic(
         raise ValueError("'{source_name = }' has already been visited.")
 
     if not reg_document_full_skip and document_full_skip_inds is not None:
-        raise ValueError(
-            "'document_full_skip_inds' must be None when 'reg_document_full_skip=False'."
-        )
+        raise ValueError("'document_full_skip_inds' must be None when 'reg_document_full_skip=False'.")
 
     if fetch_law_in_segments and not fetch_law_in_segments_kwargs:
-        raise ValueError(
-            '"fetch_law_in_segments_kwargs" must be provided when "fetch_law_in_segments=True".'
-        )
+        raise ValueError('"fetch_law_in_segments_kwargs" must be provided when "fetch_law_in_segments=True".')
 
     if not fetch_law_in_segments and fetch_law_in_segments_kwargs is not None:
-        raise ValueError(
-            "'fetch_law_in_segments_kwargs' must be None when 'fetch_law_in_segments=False'."
-        )
+        raise ValueError("'fetch_law_in_segments_kwargs' must be None when 'fetch_law_in_segments=False'.")
 
     if fetch_questions_in_segments and not fetch_questions_in_segments_kwargs:
-        raise ValueError(
-            '"fetch_questions_in_segments_kwargs" must be provided '
-            'when "fetch_questions_in_segments=True".'
-        )
+        raise ValueError('"fetch_questions_in_segments_kwargs" must be provided ' 'when "fetch_questions_in_segments=True".')
 
     if not fetch_questions_in_segments and fetch_questions_in_segments_kwargs is not None:
-        raise ValueError(
-            "'fetch_questions_in_segments_kwargs' must be None when "
-            "'fetch_questions_in_segments=False'."
-        )
+        raise ValueError("'fetch_questions_in_segments_kwargs' must be None when " "'fetch_questions_in_segments=False'.")
+
+    if save_externally_for_evaluation and save_externally_for_evaluation <= 0:
+        raise ValueError(f"'save_externally_for_evaluation' must be > 0.")
 
     _VISITED["uri"].add(uri)
     _VISITED["source_name"].add(source_name)
 
     pairs: list[tuple[str, str]] = []
+    benchmark_pairs: list[tuple[str, str]] = []
+
     source_dir = os.path.join(utils.Config.TESEMO_PATH, uri, "*.txt")
 
     uris = glob.glob(source_dir, recursive=False)
@@ -152,8 +142,19 @@ def _make_pairs_generic(
 
     n: float | int = it_to_print or float("+inf")
 
-    for file_uri in tqdm.tqdm(uris, desc=source_name):
+    inds_for_benchmark: t.FrozenSet[int] = frozenset()
+
+    if save_externally_for_evaluation:
+        save_externally_for_evaluation = int(save_externally_for_evaluation)
+        random_seed = int(hashlib.md5("dkjfkdsf".encode()).hexdigest(), base=16) % 2**32
+        rng = np.random.RandomState(random_seed)
+        inds_for_benchmark = rng.choice(len(uris), size=save_externally_for_evaluation, replace=False)
+        inds_for_benchmark = frozenset(inds_for_benchmark)
+
+    for k, file_uri in enumerate(tqdm.tqdm(uris, desc=source_name)):
         n -= 1
+
+        cur_pair_container = pairs if k not in inds_for_benchmark else benchmark_pairs
 
         segs = _read_file_segments(
             file_uri,
@@ -186,8 +187,7 @@ def _make_pairs_generic(
 
             if _do_intersect(i, j):
                 raise ValueError(
-                    f"Intersection has been found for '{i}' and '{j}' "
-                    f"while building long segments for '{source_name=}'."
+                    f"Intersection has been found for '{i}' and '{j}' " f"while building long segments for '{source_name=}'."
                 )
 
             max_ind = max(
@@ -200,17 +200,17 @@ def _make_pairs_generic(
                 seg_b = long_segment_join_string.join(segs[j]) if isinstance(j, slice) else segs[j]
 
                 if min(len(seg_a), len(seg_b)) >= min_len:
-                    pairs.append((seg_a, seg_b))
+                    cur_pair_container.append((seg_a, seg_b))
 
         else:
             for i, j, min_len in short_segment_inds:
                 if len(segs) > max(i, j) and i != j:
                     seg_a, seg_b = segs[i], segs[j]
                     if min(len(seg_a), len(seg_b)) >= min_len:
-                        pairs.append((seg_a, seg_b))
+                        cur_pair_container.append((seg_a, seg_b))
 
             if fetch_law_in_segments:
-                pairs.extend(
+                cur_pair_container.extend(
                     utils.fetch_laws_in_segments(
                         segs,
                         **fetch_law_in_segments_kwargs,  # type: ignore
@@ -218,19 +218,39 @@ def _make_pairs_generic(
                 )
 
             if fetch_questions_in_segments:
-                pairs.extend(
+                cur_pair_container.extend(
                     utils.fetch_questions_in_segments(
                         segs,
                         **fetch_questions_in_segments_kwargs,  # type: ignore
                     )
                 )
 
-        if it_to_print and n <= 0 and pairs:
+        if it_to_print and n <= 0 and cur_pair_container:
             n = it_to_print
-            utils.print_example(*pairs[-1])
+            utils.print_example(*cur_pair_container[-1])
 
     if not pairs:
         raise ValueError(f"No pair has been generated ({source_name=}, {uri=}).")
+
+    if save_externally_for_evaluation and not benchmark_pairs:
+        raise ValueError(f"No pair has been generated ({source_name=}, {uri=}).")
+
+    if len(pairs) <= len(benchmark_pairs):
+        raise ValueError("Generated more benchmark pairs than regular pairs.")
+
+    if benchmark_pairs:
+        benchmark_df = utils.gen_dataframe(
+            pairs=benchmark_pairs,
+            source_name=source_name,
+            max_length=10000,
+        )
+        utils.save_cache(
+            [benchmark_df],
+            output_dir="./benchmark_dfs",
+            output_urn=f"benchmark_{source_name}.csv",
+            sep=",",
+        )
+        print(f"Allocated {len(benchmark_df)} instances from '{source_name}' for benchmarking.")
 
     return pairs
 
@@ -239,9 +259,7 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
     pairs = collections.defaultdict(list)
 
     reg_foto = re.compile(r"[^\.a-zç]*\s*Fotos?:.+$", re.IGNORECASE)
-    base_dir = os.path.join(
-        utils.Config.TESEMO_PATH, "outros/o1_noticias_governamentais/ministerios"
-    )
+    base_dir = os.path.join(utils.Config.TESEMO_PATH, "outros/o1_noticias_governamentais/ministerios")
 
     for uri in tqdm.tqdm(glob.glob(os.path.join(base_dir, "**", "*.txt"), recursive=True)):
         with open(uri, "r", encoding="utf-8") as f_in:
@@ -264,12 +282,8 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
                 if len(segs) >= 3 and min(len(segs[2]), len(segs[1])) >= 48:
                     pairs[ministerio].append((segs[2], segs[1]))
 
-                pairs[ministerio].extend(
-                    utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1])
-                )
-                pairs[ministerio].extend(
-                    utils.fetch_questions_in_segments(segs, start_i=2, context_i=0)
-                )
+                pairs[ministerio].extend(utils.fetch_laws_in_segments(segs=segs, start_i=3, refs_i=[0, 1]))
+                pairs[ministerio].extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=0))
 
         else:
             if long_segments:
@@ -285,9 +299,7 @@ def make_pairs_ministerios(*, long_segments: bool) -> dict[str, list[tuple[str, 
                     pairs[ministerio].append((segs[1], segs[2]))
 
                 pairs[ministerio].extend(utils.fetch_laws_in_segments(segs=segs, refs_i=[1, 2]))
-                pairs[ministerio].extend(
-                    utils.fetch_questions_in_segments(segs, start_i=2, context_i=1)
-                )
+                pairs[ministerio].extend(utils.fetch_questions_in_segments(segs, start_i=2, context_i=1))
 
                 if len(segs) >= 10:
                     segs[8] = reg_foto.sub("", segs[8])
@@ -934,11 +946,7 @@ def make_pairs_senado(*, long_segments: bool) -> tuple[list[tuple[str, str]], st
     reg_banned_patterns = re.compile(
         r"^Compartilhe este conteúdo no"
         r"|^Home"
-        + (
-            r"|^Agência Senado \(Reprodução autorizada mediante citação da Agência Senado\)"
-            if not long_segments
-            else r""
-        )
+        + (r"|^Agência Senado \(Reprodução autorizada mediante citação da Agência Senado\)" if not long_segments else r"")
         + r"|^Compartilhar:"
         r"|^Compartilhe:"
         r"|[0-9]{2}/[0-9]{2}/[0-9]{4}\s*,\s+[0-9]{2}[:h][0-9]{2}"
@@ -1447,6 +1455,7 @@ def make_pairs_tjac(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1487,6 +1496,7 @@ def make_pairs_tjal(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1520,6 +1530,7 @@ def make_pairs_tjam(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1553,6 +1564,7 @@ def make_pairs_tjap(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1562,13 +1574,7 @@ def make_pairs_tjba(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "ba"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "PUBLICADO EM:"
-        "|ATUALIZADO EM:"
-        "|Texto:"
-        "|COMPARTILHAR:"
-        "|IMPRIMIR$"
-    )
+    reg_banned_patterns = re.compile("PUBLICADO EM:" "|ATUALIZADO EM:" "|Texto:" "|COMPARTILHAR:" "|IMPRIMIR$")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1594,6 +1600,7 @@ def make_pairs_tjba(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1629,6 +1636,7 @@ def make_pairs_tjce(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1664,6 +1672,7 @@ def make_pairs_tjdf(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1673,9 +1682,7 @@ def make_pairs_tjes(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "es"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "(?:SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA)-FEIRA,"
-    )
+    reg_banned_patterns = re.compile("(?:SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA)-FEIRA,")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1701,6 +1708,7 @@ def make_pairs_tjes(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1734,6 +1742,7 @@ def make_pairs_tjgo(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1743,9 +1752,7 @@ def make_pairs_tjma(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "ma"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "foto/divulgação:"
-    )
+    reg_banned_patterns = re.compile("foto/divulgação:")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1771,6 +1778,7 @@ def make_pairs_tjma(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1780,10 +1788,7 @@ def make_pairs_tjmg(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "mg"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h"
-        "|Número de visualizações"
-    )
+    reg_banned_patterns = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h" "|Número de visualizações")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1809,6 +1814,7 @@ def make_pairs_tjmg(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1818,9 +1824,7 @@ def make_pairs_tjms(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "ms"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h"
-    )
+    reg_banned_patterns = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}h")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1846,6 +1850,7 @@ def make_pairs_tjms(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1855,9 +1860,7 @@ def make_pairs_tjmt(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "mt"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}"
-    )
+    reg_banned_patterns = re.compile("[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1883,6 +1886,7 @@ def make_pairs_tjmt(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1916,6 +1920,7 @@ def make_pairs_tjpa(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1925,9 +1930,7 @@ def make_pairs_tjpb(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "pb"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "Compartilhar: "
-    )
+    reg_banned_patterns = re.compile("Compartilhar: ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -1953,6 +1956,7 @@ def make_pairs_tjpb(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1986,6 +1990,7 @@ def make_pairs_tjpe(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -1996,9 +2001,7 @@ def make_pairs_tjpi(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     source_name = f"news_tj{state}"
 
     reg_banned_patterns = re.compile(
-        "Publicado por:"
-        "|(?:segunda|terça|quarta|quinta|sexta)-feira, "
-        "|(?:domingo|s[aá]bado), [0-9]{1,2}"
+        "Publicado por:" "|(?:segunda|terça|quarta|quinta|sexta)-feira, " "|(?:domingo|s[aá]bado), [0-9]{1,2}"
     )
 
     pairs = _make_pairs_generic(
@@ -2025,6 +2028,7 @@ def make_pairs_tjpi(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2058,6 +2062,7 @@ def make_pairs_tjpr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2067,9 +2072,7 @@ def make_pairs_tjrj(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "rj"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "Notícia publicada por"
-    )
+    reg_banned_patterns = re.compile("Notícia publicada por")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -2095,6 +2098,7 @@ def make_pairs_tjrj(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2104,10 +2108,7 @@ def make_pairs_tjrn(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "rn"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "Publicado em:"
-        "|PORTAL ANTIGO"
-    )
+    reg_banned_patterns = re.compile("Publicado em:" "|PORTAL ANTIGO")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -2133,6 +2134,7 @@ def make_pairs_tjrn(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2188,6 +2190,7 @@ def make_pairs_tjro(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2221,6 +2224,7 @@ def make_pairs_tjrr(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2230,12 +2234,7 @@ def make_pairs_tjrs(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "rs"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "Compartilhar:"
-        "|Texto:"
-        "|Créditos:"
-        "|[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} - "
-    )
+    reg_banned_patterns = re.compile("Compartilhar:" "|Texto:" "|Créditos:" "|[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} - ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -2261,6 +2260,7 @@ def make_pairs_tjrs(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2270,12 +2270,7 @@ def make_pairs_tjsc(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
     state = "sc"
     source_name = f"news_tj{state}"
 
-    reg_banned_patterns = re.compile(
-        "Copiar o link desta notícia\."
-        "|Imagens:"
-        "|Conteúdo:"
-        "|Responsável:"
-    )
+    reg_banned_patterns = re.compile("Copiar o link desta notícia\." "|Imagens:" "|Conteúdo:" "|Responsável:")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/tribunais_de_justica/tj{state}",
@@ -2301,6 +2296,7 @@ def make_pairs_tjsc(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2334,6 +2330,7 @@ def make_pairs_tjse(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2367,6 +2364,7 @@ def make_pairs_tjsp(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2400,6 +2398,7 @@ def make_pairs_tjto(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2438,6 +2437,7 @@ def make_pairs_state_ac(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2447,9 +2447,7 @@ def make_pairs_state_al(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "al"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}:[0-9]{1,2} \|"
-    )
+    reg_banned_patterns = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{4} [0-9]{1,2}:[0-9]{1,2} \|")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2475,6 +2473,7 @@ def make_pairs_state_al(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2484,9 +2483,7 @@ def make_pairs_state_am(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "am"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Por .{60}$"
-    )
+    reg_banned_patterns = re.compile("Por .{60}$")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2512,6 +2509,7 @@ def make_pairs_state_am(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2522,10 +2520,7 @@ def make_pairs_state_ap(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     source_name = f"news_state_{state}"
 
     reg_banned_patterns = re.compile(
-        "(segunda|terça|quarta|quinta|sexta|sábado|domingo), [0-9]{1,2}"
-        "|Tweet"
-        "|Por: "
-        "|Fotos?: "
+        "(segunda|terça|quarta|quinta|sexta|sábado|domingo), [0-9]{1,2}" "|Tweet" "|Por: " "|Fotos?: "
     )
 
     def fn_text_preproc(x: str) -> str:
@@ -2557,6 +2552,7 @@ def make_pairs_state_ap(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2595,6 +2591,7 @@ def make_pairs_state_ba(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2604,10 +2601,7 @@ def make_pairs_state_ce(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "ce"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Data: "
-        "|Categoria: "
-    )
+    reg_banned_patterns = re.compile("Data: " "|Categoria: ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2633,6 +2627,7 @@ def make_pairs_state_ce(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2643,8 +2638,7 @@ def make_pairs_state_df(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     source_name = f"news_state_{state}"
 
     reg_banned_patterns = re.compile(
-        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [aà]s [0-9]{1,2}:[0-9]{1,2}"
-        "|.{,70}, da Agência Brasília"
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [aà]s [0-9]{1,2}:[0-9]{1,2}" "|.{,70}, da Agência Brasília"
     )
 
     def fn_text_preproc(x: str) -> str:
@@ -2676,6 +2670,7 @@ def make_pairs_state_df(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2686,12 +2681,7 @@ def make_pairs_state_es(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     source_name = f"news_state_{state}"
 
     reg_banned_patterns = re.compile(
-        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [0-9]{1,2}[h:][0-9]{1,2}"
-        "|Tweet"
-        "|Linkedin"
-        "|Compartilhar"
-        "|Imprimir"
-        "|Fotos?:"
+        "[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4} [0-9]{1,2}[h:][0-9]{1,2}" "|Tweet" "|Linkedin" "|Compartilhar" "|Imprimir" "|Fotos?:"
     )
 
     pairs = _make_pairs_generic(
@@ -2719,6 +2709,7 @@ def make_pairs_state_es(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2728,16 +2719,9 @@ def make_pairs_state_go(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "go"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Publicado:"
-        "|Última Atualização:"
-        "|Mais informações:"
-    )
+    reg_banned_patterns = re.compile("Publicado:" "|Última Atualização:" "|Mais informações:")
 
-    reg_document_full_skip = re.compile(
-        "Esses são os destaques d[oa]"
-        "|Agenda d[ao] governadora?"
-    )
+    reg_document_full_skip = re.compile("Esses são os destaques d[oa]" "|Agenda d[ao] governadora?")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2764,6 +2748,7 @@ def make_pairs_state_go(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2773,9 +2758,7 @@ def make_pairs_state_ma(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "ma"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        " - "
-    )
+    reg_banned_patterns = re.compile(" - ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2802,6 +2785,7 @@ def make_pairs_state_ma(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2811,9 +2795,7 @@ def make_pairs_state_mg(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "mg"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "(?:SEG|TER|QUA|QUI|SEX|S[ÁA]B|DOM) [0-9]{1,2} "
-    )
+    reg_banned_patterns = re.compile("(?:SEG|TER|QUA|QUI|SEX|S[ÁA]B|DOM) [0-9]{1,2} ")
 
     def fn_text_preproc(x: str) -> str:
         x = x.split("OUTRAS NOTÍCIAS")[0]
@@ -2848,6 +2830,7 @@ def make_pairs_state_mg(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2857,10 +2840,7 @@ def make_pairs_state_ms(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "ms"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        ".{,60}nrodrigues"
-        "|http"
-    )
+    reg_banned_patterns = re.compile(".{,60}nrodrigues" "|http")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2887,6 +2867,7 @@ def make_pairs_state_ms(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2896,10 +2877,7 @@ def make_pairs_state_mt(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "mt"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Crédito - "
-        "|http"
-    )
+    reg_banned_patterns = re.compile("Crédito - " "|http")
 
     def fn_seg_preproc(x: str) -> str:
         x = x.removesuffix(" - mt.gov.br")
@@ -2930,6 +2908,7 @@ def make_pairs_state_mt(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2939,9 +2918,7 @@ def make_pairs_state_pa(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "pa"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Por Redação - "
-    )
+    reg_banned_patterns = re.compile("Por Redação - ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -2968,6 +2945,7 @@ def make_pairs_state_pa(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -2977,9 +2955,7 @@ def make_pairs_state_pb(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "pb"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "publicado:"
-    )
+    reg_banned_patterns = re.compile("publicado:")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3006,6 +2982,7 @@ def make_pairs_state_pb(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3015,10 +2992,7 @@ def make_pairs_state_pe(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "pe"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "PUBLICADO:"
-        "|Fotos?:"
-    )
+    reg_banned_patterns = re.compile("PUBLICADO:" "|Fotos?:")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3045,6 +3019,7 @@ def make_pairs_state_pe(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3054,10 +3029,7 @@ def make_pairs_state_pi(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "pi"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        ""
-        "|Repórter(?:es)?:"
-    )
+    reg_banned_patterns = re.compile("" "|Repórter(?:es)?:")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3084,6 +3056,7 @@ def make_pairs_state_pi(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3138,6 +3111,7 @@ def make_pairs_state_pr(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=fn_seg_postproc,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3147,10 +3121,7 @@ def make_pairs_state_rj(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "rj"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "Publicado [0-9]{1,2}/[0-9]{1,2}/[0-9]{4}"
-        "|null "
-    )
+    reg_banned_patterns = re.compile("Publicado [0-9]{1,2}/[0-9]{1,2}/[0-9]{4}" "|null ")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3177,6 +3148,7 @@ def make_pairs_state_rj(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3211,6 +3183,7 @@ def make_pairs_state_rn(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3253,6 +3226,7 @@ def make_pairs_state_ro(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3287,6 +3261,7 @@ def make_pairs_state_rr(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3296,15 +3271,9 @@ def make_pairs_state_rs(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "rs"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        r"Inicial Imprensa"
-        r"|Publicação:"
-        r"|.{,60}\.jpg\b"
-    )
+    reg_banned_patterns = re.compile(r"Inicial Imprensa" r"|Publicação:" r"|.{,60}\.jpg\b")
 
-    reg_document_full_skip = re.compile(
-        "Agenda d[ao] governadora?"
-    )
+    reg_document_full_skip = re.compile("Agenda d[ao] governadora?")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3330,6 +3299,7 @@ def make_pairs_state_rs(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3340,8 +3310,7 @@ def make_pairs_state_sc(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     source_name = f"news_state_{state}"
 
     reg_banned_patterns = re.compile(
-        r"Por.{,60}[0-9] de [a-zç]+ de [0-9]{4}$"
-        "|Secretaria de Estado da Justiça e Cidadania – SJC"
+        r"Por.{,60}[0-9] de [a-zç]+ de [0-9]{4}$" "|Secretaria de Estado da Justiça e Cidadania – SJC"
     )
 
     pairs = _make_pairs_generic(
@@ -3369,6 +3338,7 @@ def make_pairs_state_sc(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3378,10 +3348,7 @@ def make_pairs_state_se(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "se"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "(?:Segunda|Terça|Quarta|Quinta|Sexta)-Feira,"
-        "|(?:Sábado|Domingo),"
-    )
+    reg_banned_patterns = re.compile("(?:Segunda|Terça|Quarta|Quinta|Sexta)-Feira," "|(?:Sábado|Domingo),")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3408,6 +3375,7 @@ def make_pairs_state_se(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3418,9 +3386,7 @@ def make_pairs_state_sp(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     source_name = f"news_state_{state}"
 
     reg_banned_patterns = re.compile(
-        "(:?seg|ter|qua|qui|sex|s[aá]b|dom), "
-        "|Compartilhe essa página"
-        "|[-–] Siga o Governo do Estado"
+        "(:?seg|ter|qua|qui|sex|s[aá]b|dom), " "|Compartilhe essa página" "|[-–] Siga o Governo do Estado"
     )
 
     pairs = _make_pairs_generic(
@@ -3448,6 +3414,7 @@ def make_pairs_state_sp(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name
@@ -3457,10 +3424,7 @@ def make_pairs_state_to(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
     state = "to"
     source_name = f"news_state_{state}"
 
-    reg_banned_patterns = re.compile(
-        "publicado:"
-        "|por .{,50}$"
-    )
+    reg_banned_patterns = re.compile("publicado:" "|por .{,50}$")
 
     pairs = _make_pairs_generic(
         f"outros/o1_noticias_governamentais/governos_estaduais/{state}",
@@ -3487,6 +3451,7 @@ def make_pairs_state_to(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         fn_seg_postproc=None,
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
+        save_externally_for_evaluation=100,
     )
 
     return pairs, source_name

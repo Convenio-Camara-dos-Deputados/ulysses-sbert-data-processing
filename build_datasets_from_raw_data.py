@@ -7,20 +7,6 @@ import colorama
 import dataset_builder
 
 
-def _expand_path(path: str) -> str:
-    path = os.path.expandvars(path)
-    path = os.path.expanduser(path)
-    path = os.path.abspath(path)
-    return path
-
-
-def save_cache(dfs: list[pd.DataFrame], output_dir: str = "./processed_data") -> None:
-    output_dir = os.path.abspath(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-    df = pd.concat(dfs, ignore_index=True)
-    df.to_csv(os.path.join(output_dir, "positive_pairs.tsv"), sep="\t")
-
-
 def check_data_availability_() -> None:
     for subfolder in ["outros", "legislativo"]:
         cur_path = os.path.join(dataset_builder.utils.Config.TESEMO_PATH, subfolder)
@@ -45,14 +31,12 @@ def check_data_availability_() -> None:
         )
 
 
-def build_pairs(
-    tesemo_path: str, complementary_data_path: str, cache_dir: str, long_segments: bool, debug: bool
-) -> None:
-    cache_dir = _expand_path(cache_dir)
+def build_pairs(tesemo_path: str, complementary_data_path: str, cache_dir: str, long_segments: bool, debug: bool) -> None:
+    cache_dir = dataset_builder.utils.expand_path(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
-    dataset_builder.utils.Config.TESEMO_PATH = _expand_path(tesemo_path)
-    dataset_builder.utils.Config.COMPLEMENTARY_DATADIR = _expand_path(complementary_data_path)
+    dataset_builder.utils.Config.TESEMO_PATH = dataset_builder.utils.expand_path(tesemo_path)
+    dataset_builder.utils.Config.COMPLEMENTARY_DATADIR = dataset_builder.utils.expand_path(complementary_data_path)
 
     check_data_availability_()
 
@@ -119,15 +103,13 @@ def build_pairs(
         pairs, source_name = fn(long_segments=long_segments)
         dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name=source_name))
 
-    save_cache(dfs, output_dir=cache_dir)
+    dataset_builder.utils.save_cache(dfs, output_dir=cache_dir)
 
-    pairs_a, pairs_b = dataset_builder.leg_bills.make_pairs_fed_bills(
-        long_segments=long_segments, debug=debug
-    )
+    pairs_a, pairs_b = dataset_builder.leg_bills.make_pairs_fed_bills(long_segments=long_segments, debug=debug)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs_a, source_name="leg_bills_art_fed"))
     dfs.append(dataset_builder.utils.gen_dataframe(pairs_b, source_name="leg_bills_just_fed"))
 
-    save_cache(dfs, output_dir=cache_dir)
+    dataset_builder.utils.save_cache(dfs, output_dir=cache_dir)
 
     pairs_dict = dataset_builder.leg_bills.make_pairs_state_bills(
         long_segments=long_segments,
@@ -135,23 +117,13 @@ def build_pairs(
     )
 
     for tag, (pairs_a, pairs_b) in pairs_dict.items():
-        dfs.append(
-            dataset_builder.utils.gen_dataframe(
-                pairs_a, source_name=f"leg_bills_art_{tag}", allow_empty=debug
-            )
-        )
-        dfs.append(
-            dataset_builder.utils.gen_dataframe(
-                pairs_b, source_name=f"leg_bills_just_{tag}", allow_empty=True
-            )
-        )
+        dfs.append(dataset_builder.utils.gen_dataframe(pairs_a, source_name=f"leg_bills_art_{tag}", allow_empty=debug))
+        dfs.append(dataset_builder.utils.gen_dataframe(pairs_b, source_name=f"leg_bills_just_{tag}", allow_empty=True))
 
-    save_cache(dfs, output_dir=cache_dir)
+    dataset_builder.utils.save_cache(dfs, output_dir=cache_dir)
 
     pairs = dataset_builder.acronyms_and_aliases.make_pairs(long_segments=long_segments)
-    dfs.append(
-        dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="acronyms_and_aliases")
-    )
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="acronyms_and_aliases"))
 
     fns = (
         dataset_builder.general.make_pairs_tv_camara,
@@ -191,7 +163,7 @@ def build_pairs(
         dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name=f"news_min_{tag}"))
         assert len(dfs[-1]) >= 2, dfs[-1]
 
-    save_cache(dfs, output_dir=cache_dir)
+    dataset_builder.utils.save_cache(dfs, output_dir=cache_dir)
 
     pairs = dataset_builder.stf_annotated_laws.make_pairs_const()
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="stf_comments_const"))
@@ -212,16 +184,10 @@ def build_pairs(
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="law_mentions"))
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="map2doc")
-    dfs.append(
-        dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_map2doc")
-    )
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_map2doc"))
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="clusterComments")
-    dfs.append(
-        dataset_builder.utils.gen_dataframe(
-            pairs, min_length=1, source_name="chatgpt_clusterComments"
-        )
-    )
+    dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_clusterComments"))
 
     pairs = dataset_builder.chatgpt_data.make_pairs(task="ir")
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, min_length=1, source_name="chatgpt_ir"))
@@ -267,19 +233,15 @@ def build_pairs(
     pairs = dataset_builder.int_agreements.make_pairs(long_segments=long_segments)
     dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name="int_agreements"))
 
-    save_cache(dfs, output_dir=cache_dir)
+    dataset_builder.utils.save_cache(dfs, output_dir=cache_dir)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        "Generate similar pairs of Brazilian legal data from Tesemõ corpus."
-    )
+    parser = argparse.ArgumentParser("Generate similar pairs of Brazilian legal data from Tesemõ corpus.")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--long-segments", action="store_true")
     parser.add_argument("--cache-dir", default="./processed_data", type=str)
     parser.add_argument("--tesemo-path", default="./tesemo_v2.1", type=str)
-    parser.add_argument(
-        "--complementary-data-path", default="./ulysses_sbert_complementary_data", type=str
-    )
+    parser.add_argument("--complementary-data-path", default="./ulysses_sbert_complementary_data", type=str)
     args = parser.parse_args()
     build_pairs(**vars(args))

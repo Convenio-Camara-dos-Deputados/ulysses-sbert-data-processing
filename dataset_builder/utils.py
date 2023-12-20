@@ -24,9 +24,7 @@ except LookupError:
 reg_vigorar = re.compile(r"passam?\s+a\s+vigorar", re.IGNORECASE)
 reg_dizeres = re.compile(r"seguintes\s*dizeres\s*:\s*$", re.IGNORECASE)
 reg_dots = re.compile(r"(?:\.\s*){6,}|…")
-reg_split_quotes = re.compile(
-    f"(?<=[{string.punctuation}])\s*(?=[\u201C\u2018])|(?<=\.\s*[\u2019\u201D])"
-)
+reg_split_quotes = re.compile(f"(?<=[{string.punctuation}])\s*(?=[\u201C\u2018])|(?<=\.\s*[\u2019\u201D])")
 reg_h_whitespace_spans = re.compile(r"\h{2,}")
 reg_empty_lines = re.compile(r"\n\h*(?=\n)|^\h*\n|\n\h*$")
 reg_cliffhanger = re.compile(r":[\s\"'\u201C\u2018\u2019\u201D]*$")
@@ -69,9 +67,7 @@ def inject_negative_pairs(
 ) -> pd.DataFrame:
     df_random = df.copy()
     df_random.iloc[:, col_ind_to_shuffle] = (
-        df_random.iloc[:, col_ind_to_shuffle]
-        .sample(frac=1.0, replace=False, random_state=random_state)
-        .values.tolist()
+        df_random.iloc[:, col_ind_to_shuffle].sample(frac=1.0, replace=False, random_state=random_state).values.tolist()
     )
 
     col_a = df_random.iloc[:, col_ind_as_ref].apply(lambda x: x.lower().strip())
@@ -254,7 +250,7 @@ def gen_dataframe(
     source_name: t.Optional[str] = None,
     target: t.Optional[int] = None,
     min_length: int = 30,
-    max_length: int = 1200,
+    max_length: int = 3000,
     *,
     allow_empty: bool = False,
 ) -> pd.DataFrame:
@@ -277,9 +273,7 @@ def gen_dataframe(
     ]
 
     lens = df.map(len).min(axis=1).values
-    df.loc[lens > max_length, :] = (
-        df.loc[lens > max_length, :].map(lambda x: f"{x[:max_length-3]}...").values
-    )
+    df.loc[lens > max_length, :] = df.loc[lens > max_length, :].map(lambda x: f"{x[:max_length-3]}...").values
 
     df = df.loc[min_length <= lens, :]
 
@@ -299,9 +293,7 @@ def _prepare_source_name(source_name: str) -> str:
     return reg_not_alphanumeric.sub("_", source_name.strip().upper())
 
 
-def fetch_further_leg_context(
-    segs: list[str], start_i: int = 0, min_seg_length: int = 20
-) -> tuple[t.Optional[str], int]:
+def fetch_further_leg_context(segs: list[str], start_i: int = 0, min_seg_length: int = 20) -> tuple[t.Optional[str], int]:
     if start_i >= len(segs):
         return None, start_i
 
@@ -318,9 +310,7 @@ def fetch_further_leg_context(
         items.append(segs[i])
         i += 1
         while i < len(segs) and (
-            len(items[-1]) < min_seg_length
-            or reg_cliffhanger.search(items[-1])
-            or reg_dots.search(items[-1])
+            len(items[-1]) < min_seg_length or reg_cliffhanger.search(items[-1]) or reg_dots.search(items[-1])
         ):
             items.append(segs[i])
             i += 1
@@ -487,11 +477,7 @@ def fetch_questions_in_segments(
 
     j = start_i
     while j < len(segs) - 1:
-        if (
-            reg_questions.match(segs[j])
-            and len(segs[j + 1]) > 64
-            and "?" not in segs[j + 1].rstrip()[-2:]
-        ):
+        if reg_questions.match(segs[j]) and len(segs[j + 1]) > 64 and "?" not in segs[j + 1].rstrip()[-2:]:
             new_pairs.append((f"{context}{segs[j]}", segs[j + 1]))
             j += 1
 
@@ -501,3 +487,19 @@ def fetch_questions_in_segments(
         PAIR_COPY_QUESTIONS.extend(new_pairs)
 
     return new_pairs
+
+
+def expand_path(path: str) -> str:
+    path = os.path.expandvars(path)
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+    return path
+
+
+def save_cache(
+    dfs: list[pd.DataFrame], output_dir: str = "./processed_data", output_urn: str = "positive_pairs.tsv", sep="\t"
+) -> None:
+    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    df = pd.concat(dfs, ignore_index=True)
+    df.to_csv(os.path.join(output_dir, output_urn), sep=sep)

@@ -63,19 +63,14 @@ def make_pairs(long_segments: bool = False) -> tuple[str, str]:
             "estatuto_empresa": "l12_estatutos/Estatuto_Nacional_da_Microempresae_da_Empresa_de_Pequeno_Porte.txt",
         }
 
-        doc_urn_to_uri = {
-            k: os.path.join(utils.Config.TESEMO_PATH, "legislativo", v)
-            for k, v in doc_urn_to_uri.items()
-        }
+        doc_urn_to_uri = {k: os.path.join(utils.Config.TESEMO_PATH, "legislativo", v) for k, v in doc_urn_to_uri.items()}
         fn_fetch = lambda doc_urn: _fetch_doc_contents(doc_urn_to_uri[doc_urn], segmenter=segmenter)
 
     segs = [
         "Estatuto da Advocacia e da Ordem dos Advogados do Brasil",
         "LEI Nº 8. 906, DE 4 DE JULHO DE 1994. ( Vide ADIN 6278 )",
         "Dispõe sobre o Estatuto da Advocacia e a Ordem dos Advogados do Brasil ( OAB ).",
-        "Art. 1º São atividades privativas de advocacia :"
-        if not long_segments
-        else fn_fetch("estatuto_oab"),
+        "Art. 1º São atividades privativas de advocacia :" if not long_segments else fn_fetch("estatuto_oab"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -236,9 +231,7 @@ def make_pairs(long_segments: bool = False) -> tuple[str, str]:
         "LEI N o 10. 406, DE 10 DE JANEIRO DE 2002",
         "Lei de Introdução às normas do Direito Brasileiro ( Vide Lei nº 14. 195, de 2021 )",
         "Institui o Código Civil.",
-        "Art. 1º Toda pessoa é capaz de direitos e deveres na ordem civil."
-        if not long_segments
-        else fn_fetch("codigo_civil"),
+        "Art. 1º Toda pessoa é capaz de direitos e deveres na ordem civil." if not long_segments else fn_fetch("codigo_civil"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -332,9 +325,7 @@ def make_pairs(long_segments: bool = False) -> tuple[str, str]:
         "Código de Águas",
         "DECRETO Nº 24. 643, DE 10 DE JULHO DE 1934. ( Vide Decreto - Lei nº 852, de 1938 ) ( Vide Decreto - lei nº 3. 763, de 1941 ) ( Vide Decreto nº 2. 869, de 1998 )",
         "Decreta o Código de Águas.",
-        "Art. 1º As águas públicas podem ser de uso comum ou dominicais."
-        if not long_segments
-        else fn_fetch("codigo_aguas"),
+        "Art. 1º As águas públicas podem ser de uso comum ou dominicais." if not long_segments else fn_fetch("codigo_aguas"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
     segs = [
@@ -386,9 +377,7 @@ def make_pairs(long_segments: bool = False) -> tuple[str, str]:
         "Código Comercial",
         "LEI Nº 556, DE 25 DE JUNHO DE 1850.",
         "Ordem do Juízo no processo comercial ( Vide Lei nº 1. 237, de 1864 ) ( Vide Decreto - lei n° 1. 608, de 1939 ) ( Vide Lei n° 5. 869, de 11. 1. 1973 )",
-        "Art. 1 - Podem comerciar no Brasil :"
-        if not long_segments
-        else fn_fetch("codigo_comercial"),
+        "Art. 1 - Podem comerciar no Brasil :" if not long_segments else fn_fetch("codigo_comercial"),
     ]
     pairs.extend(itertools.combinations(segs, 2))
 

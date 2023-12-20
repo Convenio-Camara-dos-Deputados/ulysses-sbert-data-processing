@@ -27,9 +27,7 @@ reg_preproc_ba_law = re.compile(
 reg_preproc_ba_whitespaces = re.compile(r"\h{2,}")
 
 
-def split_justificativa(
-    content: str, segmenter: segmentador.Segmenter
-) -> tuple[t.Optional[str], t.Optional[str]]:
+def split_justificativa(content: str, segmenter: segmentador.Segmenter) -> tuple[t.Optional[str], t.Optional[str]]:
     content = content.split("ANEXO")[0]
     just_content = segmenter.preprocess_legal_text(content, return_justificativa=True)[1]
 
@@ -46,9 +44,7 @@ def split_justificativa(
         just_content = aux
 
     just_a, i = utils.fetch_further_leg_context(utils.natural_sentence_tokenize(just_content))
-    just_b, _ = utils.fetch_further_leg_context(
-        utils.natural_sentence_tokenize(just_content), start_i=i
-    )
+    just_b, _ = utils.fetch_further_leg_context(utils.natural_sentence_tokenize(just_content), start_i=i)
 
     if just_a and reg_sala.match(just_a):
         just_a = None
@@ -81,9 +77,7 @@ def make_pairs_fed_bills(
 
     documents.dropna(subset=["txtEmenta", "txtInteiroTeor"], inplace=True)
     documents = documents.loc[~documents.index.duplicated(keep="last")]
-    documents = documents.filter(
-        regex="|".join(["PL", "PDC", "PEC", "PLP", "PRC", "PDL"]), axis="index"
-    )
+    documents = documents.filter(regex="|".join(["PL", "PDC", "PEC", "PLP", "PRC", "PDL"]), axis="index")
 
     assert len(documents)
 
@@ -115,9 +109,7 @@ def make_pairs_fed_bills(
             pairs_leg.append((ementa_content_ext, ementa_explanation))
 
         if long_segments:
-            segs, justs = segmenter(
-                doc_content, remove_noise_subsegments=True, return_justificativa=True
-            )
+            segs, justs = segmenter(doc_content, remove_noise_subsegments=True, return_justificativa=True)
             k = utils.fetch_first_item_index(segs, prefix="Art")
 
             if k:
@@ -182,9 +174,7 @@ def fn_doc_name_ac(segs: list[str], *args: t.Any, **kwargs: t.Any) -> tuple[str,
 
 
 @fn_patch_return
-def fn_doc_name_al(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_al(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     i = first_art_ind - 1
     reg_skip = re.compile(
         "Este texto não|Autora?:|[AO] GOVERNADORA? DO ESTADO|PUBLICAD[OA] NO DOE|O PRESIDENTE",
@@ -240,9 +230,7 @@ def fn_doc_name_ap(segs: list[str], *args: t.Any, **kwargs: t.Any) -> tuple[str,
 
 
 @fn_patch_return
-def fn_doc_name_es(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_es(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     i = first_art_ind - 3
     while i >= 0 and reg_someone.match(segs[i]):
         i -= 1
@@ -257,9 +245,7 @@ def fn_doc_name_es(
 
 
 @fn_patch_return
-def fn_doc_name_go(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_go(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|Mensagem de Veto|Revogad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -270,9 +256,7 @@ def fn_doc_name_go(
 
 
 @fn_patch_return
-def fn_doc_name_ma(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_ma(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("A MESA DA ASSEMBL[ÉE]IA|ESTADO DO MARANHÃO ASSEMBL[ÉE]IA", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -283,9 +267,7 @@ def fn_doc_name_ma(
 
 
 @fn_patch_return
-def fn_doc_name_mg(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_mg(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "Palácio da Inconfidência|Belo Horizonte, aos|Considerando|DECRETA",
         re.IGNORECASE,
@@ -299,9 +281,7 @@ def fn_doc_name_mg(
 
 
 @fn_patch_return
-def fn_doc_name_ms(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_ms(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Revogad|Publicad|[AO] GOVERNADOR|DECRETA", re.IGNORECASE)
     i = first_art_ind - 2
     while i >= 1 and (reg_skip.match(segs[i]) or reg_skip.match(segs[i - 1])):
@@ -312,9 +292,7 @@ def fn_doc_name_ms(
 
 
 @fn_patch_return
-def fn_doc_name_mt(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_mt(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Autoria:|Autores:|Autora?s?:", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -325,9 +303,7 @@ def fn_doc_name_mt(
 
 
 @fn_patch_return
-def fn_doc_name_pa(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_pa(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|Mensagem de Veto|Revogad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -338,9 +314,7 @@ def fn_doc_name_pa(
 
 
 @fn_patch_return
-def fn_doc_name_pb(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_pb(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Autoria:|Autores:|Autora?s?:", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -351,16 +325,11 @@ def fn_doc_name_pb(
 
 
 @fn_patch_return
-def fn_doc_name_pe(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_pe(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Este texto não|DECRETA|CONSIDERANDO", re.IGNORECASE)
     i = first_art_ind - 2
     while i >= 1 and (
-        reg_skip.match(segs[i])
-        or reg_someone.match(segs[i])
-        or reg_skip.match(segs[i - 1])
-        or reg_someone.match(segs[i - 1])
+        reg_skip.match(segs[i]) or reg_someone.match(segs[i]) or reg_skip.match(segs[i - 1]) or reg_someone.match(segs[i - 1])
     ):
         i -= 1
 
@@ -369,9 +338,7 @@ def fn_doc_name_pe(
 
 
 @fn_patch_return
-def fn_doc_name_pr(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_pr(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile("Publicad", re.IGNORECASE)
     i = first_art_ind - 3
     while i >= 0 and reg_skip.match(segs[i]):
@@ -382,9 +349,7 @@ def fn_doc_name_pr(
 
 
 @fn_patch_return
-def fn_doc_name_sc(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_sc(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile(
         r".{,45}:|Documentação|Alterad|Revogad|Consolidad|Veto|LIVRO|TÍTULO|CAPÍTULO|SEÇÃO|SUBSEÇÃO|Procedência|Natureza|\bD[\s.]*O\b",
         re.IGNORECASE,
@@ -398,9 +363,7 @@ def fn_doc_name_sc(
 
 
 @fn_patch_return
-def fn_doc_name_sp(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_sp(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "(?:Re)?publicad[oa]|Revogad[oa]|Prorrogad[oa]|Alterad[oa]|Rejeitad[oa]|Consolidad[oa]|Regulamentad[oa]|"
         "Este texto não|"
@@ -439,9 +402,7 @@ def fn_doc_name_sp(
 
 
 @fn_patch_return
-def fn_doc_name_to(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_to(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile(
         r"Publicad|Alterad|Regulamentad|Revogad|Consolidad|Veto|LIVRO|TÍTULO|CAPÍTULO|SEÇÃO|SUBSEÇÃO|\s*\*",
         re.IGNORECASE,
@@ -459,9 +420,7 @@ def fn_doc_name_to(
 
 
 @fn_patch_return
-def fn_doc_name_default(
-    segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any
-) -> tuple[str, str] | None:
+def fn_doc_name_default(segs: list[str], first_art_ind: int, *args: t.Any, **kwargs: t.Any) -> tuple[str, str] | None:
     reg_skip = re.compile(
         "(?:Re)?publicad[oa]|Revogad[oa]|Prorrogad[oa]|Alterad[oa]|Rejeitad[oa]|Consolidad[oa]|Regulamentad[oa]|"
         "Este texto não|"
@@ -501,12 +460,8 @@ def make_pairs_state_bills(
     long_segments: bool,
     debug: bool = False,
 ) -> dict[str, tuple[list[tuple[str, str]], list[tuple[str, str]]]]:
-    state_dirs = glob.glob(
-        os.path.join(utils.Config.TESEMO_PATH, "legislativo/l2_legislacao_estadual/legislacao_*")
-    )
-    state_dirs = [
-        item for item in state_dirs if not re.search("_(?:pi|rr)$", os.path.basename(item))
-    ]
+    state_dirs = glob.glob(os.path.join(utils.Config.TESEMO_PATH, "legislativo/l2_legislacao_estadual/legislacao_*"))
+    state_dirs = [item for item in state_dirs if not re.search("_(?:pi|rr)$", os.path.basename(item))]
 
     assert len(state_dirs) == 24
 
@@ -624,15 +579,11 @@ def make_pairs_state_bills(
                 doc_content[: 10000 if long_segments else 4000],
                 remove_noise_subsegments=True,
             )
-            first_article, j = utils.fetch_first_item_with_index(
-                segs, segmenter=segmenter, prefix="Art"
-            )
+            first_article, j = utils.fetch_first_item_with_index(segs, segmenter=segmenter, prefix="Art")
 
             if not first_article:
                 continue
-            if state_acronym in acronym_to_filters and acronym_to_filters[state_acronym].search(
-                first_article
-            ):
+            if state_acronym in acronym_to_filters and acronym_to_filters[state_acronym].search(first_article):
                 continue
             if reg_titles.search(first_article):
                 continue
@@ -640,20 +591,12 @@ def make_pairs_state_bills(
             first_article = utils.remove_spurious_whitespaces(first_article)
             doc_name, ementa_content = acronym_to_fn_doc_name[state_acronym](segs, j)
 
-            if (
-                not ementa_content
-                or not doc_name
-                or not reg_accepted_documents_name.match(doc_name)
-            ):
+            if not ementa_content or not doc_name or not reg_accepted_documents_name.match(doc_name):
                 continue
 
-            if state_acronym in acronym_to_filters and acronym_to_filters[state_acronym].search(
-                ementa_content
-            ):
+            if state_acronym in acronym_to_filters and acronym_to_filters[state_acronym].search(ementa_content):
                 continue
-            if reg_public_utility.search(first_article) or reg_public_utility.search(
-                ementa_content
-            ):
+            if reg_public_utility.search(first_article) or reg_public_utility.search(ementa_content):
                 continue
 
             doc_name = reg_law_decree.sub(r"\1 ESTADUAL", doc_name)

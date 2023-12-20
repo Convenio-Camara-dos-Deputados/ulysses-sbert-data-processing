@@ -9,12 +9,8 @@ from . import utils
 def make_pairs():
     reg_noise = re.compile(r"Texto compilado|Mensagem de veto|Vigência|Regulamento")
 
-    paths = glob.glob(
-        os.path.join(utils.Config.TESEMO_PATH, "legislativo", "l9_codigos_legais/*.txt")
-    )
-    paths.extend(
-        glob.glob(os.path.join(utils.Config.TESEMO_PATH, "legislativo", "l12_estatutos/*.txt"))
-    )
+    paths = glob.glob(os.path.join(utils.Config.TESEMO_PATH, "legislativo", "l9_codigos_legais/*.txt"))
+    paths.extend(glob.glob(os.path.join(utils.Config.TESEMO_PATH, "legislativo", "l12_estatutos/*.txt")))
     paths.append(
         os.path.join(
             utils.Config.TESEMO_PATH,
@@ -49,11 +45,7 @@ def make_pairs():
 
             if aux and not reg_revogado.search(a) and len(a) > 10:
                 for subitem in aux:
-                    if (
-                        len(subitem) > 10
-                        and not reg_encerrado.search(subitem)
-                        and ("A" <= subitem[0] <= "Z")
-                    ):
+                    if len(subitem) > 10 and not reg_encerrado.search(subitem) and ("A" <= subitem[0] <= "Z"):
                         pairs.append((a, subitem))
 
     assert len(pairs)
