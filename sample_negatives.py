@@ -45,6 +45,11 @@ class UnionFindRank:
 def save_dataframe(negative_pairs: list[pd.DataFrame], output_uri: str, sep: str) -> None:
     df_out = pd.concat(negative_pairs, ignore_index=True)
     assert df_out.shape[1] == 3
+
+    output_dir = os.path.dirname(output_uri)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
     df_out.to_csv(output_uri, sep=sep)
 
 
