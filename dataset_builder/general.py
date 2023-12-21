@@ -1,10 +1,10 @@
 import typing as t
 import glob
 import os
-import re
 import collections
 import hashlib
 
+import regex as re
 import pandas as pd
 import numpy as np
 import tqdm
@@ -101,10 +101,10 @@ def _make_pairs_generic(
     save_externally_for_evaluation: int | None = None,
 ) -> list[tuple[str, str]]:
     if uri in _VISITED["uri"]:
-        raise ValueError("'{uri = }' has already been visited.")
+        raise ValueError(f"'{uri = }' has already been visited.")
 
     if source_name in _VISITED["source_name"]:
-        raise ValueError("'{source_name = }' has already been visited.")
+        raise ValueError(f"'{source_name = }' has already been visited.")
 
     if not reg_document_full_skip and document_full_skip_inds is not None:
         raise ValueError("'document_full_skip_inds' must be None when 'reg_document_full_skip=False'.")
@@ -3452,6 +3452,414 @@ def make_pairs_state_to(*, long_segments: bool) -> tuple[list[tuple[str, str]], 
         apply_preproc_before_banned_patterns=True,
         it_to_print=utils.Config.IT_TO_PRINT,
         save_externally_for_evaluation=100,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_gsi(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_gsi"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/gsi_gabinete_de_seguranca_institucional",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_secom(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_secom"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/secom_secretaria_de_comunicacao_social",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_cgu(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_cgu"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/cgu_controladoria_geral_da_uniao",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_agu(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_agu"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/agu_advocacia_geral_da_uniao",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_casa_civil(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_casa_civil"
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/casa_civil",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=None,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_ancine(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_ancine"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/ancine_agencia_nacional_do_cinema",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_funai(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_funai"
+
+    reg_banned_patterns = re.compile(
+        "Compartilhe:"
+        "|Compartilhe por Facebook"
+        "|Compartilhe por Twitter"
+        "|Compartilhe por WhatsApp"
+        "|link para Copiar para área de transferência"
+        "|Publicado em"
+    )
+
+    reg_noise = re.compile(r" - Foto:.{,80}$")
+    def fn_seg_preproc(x: str) -> str:
+        x = reg_noise.sub("", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/funai",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 48),
+            (2, 1, 64),
+            (2, 3, 80),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=48,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=fn_seg_preproc,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_bnds(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_bnds"
+
+    reg_banned_patterns = re.compile(
+        r"[0-9]+ de "
+        r"(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) "
+        r"de [0-9]{4}"
+    )
+
+    reg_subitems = re.compile(r"\n\s*[•·.]\s+")
+    def fn_text_preproc(x: str) -> str:
+        x = reg_subitems.sub("; ", x)
+        return x
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/bnds_banco_nacional_do_desenvolvimento",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=fn_text_preproc,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
+    )
+
+    return pairs, source_name
+
+
+def make_pairs_fapesp(*, long_segments: bool) -> tuple[list[tuple[str, str]], str]:
+    source_name = "news_fapesp"
+
+    reg_banned_patterns = re.compile(
+        "[0-9]+ de (?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de [0-9]{4}"
+        "|Facebook"
+        "|Twitter"
+        "|Email"
+        "|WhatsApp"
+        "|LinkedIn"
+        "|VOLTAR"
+        "|\s*Republicar"
+    )
+
+    pairs = _make_pairs_generic(
+        "outros/o1_noticias_governamentais/fapesp",
+        source_name=source_name,
+        long_segments=long_segments,
+        long_segment_inds=(slice(0, 2), slice(2, None), 64),
+        short_segment_inds=[
+            (0, 1, 32),
+            (2, 1, 48),
+            (2, 3, 64),
+        ],
+        fn_text_preproc=None,
+        fetch_law_in_segments=True,
+        fetch_questions_in_segments=True,
+        fetch_law_in_segments_kwargs={"start_i": 4, "refs_i": None},
+        fetch_questions_in_segments_kwargs={"start_i": 4, "context_i": 0},
+        min_seg_len=32,
+        redundancy_check_inds=[0, 1],
+        reg_banned_patterns=reg_banned_patterns,
+        full_search_banned_patterns=False,
+        reg_document_full_skip=None,
+        document_full_skip_inds=None,
+        fn_seg_preproc=None,
+        fn_seg_postproc=None,
+        apply_preproc_before_banned_patterns=True,
+        it_to_print=utils.Config.IT_TO_PRINT,
     )
 
     return pairs, source_name

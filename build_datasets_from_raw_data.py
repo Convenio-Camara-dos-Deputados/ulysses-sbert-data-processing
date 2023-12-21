@@ -43,6 +43,21 @@ def build_pairs(tesemo_path: str, complementary_data_path: str, cache_dir: str, 
     dfs: list[pd.DataFrame] = []
 
     fns = (
+        dataset_builder.general.make_pairs_gsi,
+        dataset_builder.general.make_pairs_secom,
+        dataset_builder.general.make_pairs_cgu,
+        dataset_builder.general.make_pairs_agu,
+        dataset_builder.general.make_pairs_casa_civil,
+        dataset_builder.general.make_pairs_ancine,
+        dataset_builder.general.make_pairs_funai,
+        dataset_builder.general.make_pairs_bnds,
+        dataset_builder.general.make_pairs_fapesp,
+    )
+    for fn in fns:
+        pairs, source_name = fn(long_segments=long_segments)
+        dfs.append(dataset_builder.utils.gen_dataframe(pairs, source_name=source_name))
+
+    fns = (
         dataset_builder.general.make_pairs_tjac,
         dataset_builder.general.make_pairs_tjal,
         dataset_builder.general.make_pairs_tjam,
