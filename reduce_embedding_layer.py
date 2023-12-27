@@ -70,6 +70,7 @@ def reduce(
     cache_dir: str,
     word_embedding_submodule_name: str,
     ignore_cache: bool,
+    local_only: bool,
     dry_run: bool,
 ) -> None:
     cache_dir = os.path.abspath(cache_dir)
@@ -80,8 +81,10 @@ def reduce(
     if not dry_run:
         os.makedirs(output_dir, exist_ok=True)
 
-    model_uri = os.path.expanduser(model_uri)
-    model_uri = os.path.abspath(model_uri)
+    if local_only:
+        model_uri = os.path.expanduser(model_uri)
+        model_uri = os.path.abspath(model_uri)
+
     model = sentence_transformers.SentenceTransformer(model_uri, device="cpu")
     model.eval()
 
@@ -221,6 +224,12 @@ if __name__ == "__main__":
         "--ignore-cache",
         action="store_true",
         help="If set, ignore cache files and recompute token distribution.",
+    )
+
+    parser_cache.add_argument(
+        "--local-only",
+        action="store_true",
+        help="If set, search for local files only.",
     )
 
     args = parser.parse_args()
